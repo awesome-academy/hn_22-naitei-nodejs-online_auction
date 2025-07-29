@@ -1,0 +1,270 @@
+// Prisma schema file
+// Docs: https://pris.ly/d/prisma-schema
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  BIDDER
+  SELLER
+}
+
+model User {
+  userId     String   @id @default(uuid()) @map("user_id") @db.Char(36)
+  email      String   @unique @db.VarChar(255)
+  password   String   @db.VarChar(255)
+  role       Role
+  isBanned   Boolean  @default(false) @map("is_banned")
+  isVerified Boolean  @default(false) @map("is_verified")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  followings Follow[] @relation("Users_Follow_Sellers")
+  followers  Follow[] @relation("Sellers_FollowedBy_Users")
+
+  profile Profile? @relation("User_Has_Profile")
+
+  addresses Address[] @relation("User_Has_Addresses")
+
+  products Product[] @relation("Seller_Sell_Products")
+
+  auctions Auction[] @relation("User_Wins_Auctions")
+
+  bid Bid[] @relation("User_Has_Bids")
+
+  payment Payment[] @relation("User_Has_Payments")
+
+  @@map("users")
+}
+
+model Follow {
+  followId String @id @default(uuid()) @map("follow_id") @db.Char(36)
+
+  followerId String @map("follower_id") @db.Char(36)
+  follower   User   @relation("Users_Follow_Sellers", fields: [followerId], references: [userId], onDelete: Cascade)
+
+  sellerId String @map("seller_id") @db.Char(36)
+  seller   User   @relation("Sellers_FollowedBy_Users", fields: [sellerId], references: [userId], onDelete: Cascade)
+
+  followedAt DateTime @default(now()) @map("followed_at") @db.Timestamp(0)
+
+  @@unique([followerId, sellerId])
+  @@map("follows")
+}
+
+model Profile {
+  userId String @id @map("user_id") @db.Char(36)
+  user   User   @relation("User_Has_Profile", fields: [userId], references: [userId], onDelete: Cascade)
+
+  fullName        String?   @map("full_name") @db.VarChar(255)
+  phoneNumber     String?   @map("phone_number") @db.VarChar(255)
+  profileImageUrl String?   @map("profile_image_url") @db.VarChar(255)
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt       DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@map("profiles")
+}
+
+enum AddressType {
+  Home
+  Work
+  Others
+}
+
+model Address {
+  addressId String @id @default(uuid()) @map("address_id") @db.Char(36)
+
+  userId String @map("user_id") @db.Char(36)
+  user   User   @relation("User_Has_Addresses", fields: [userId], references: [userId], onDelete: Cascade)
+
+  streetAddress String      @map("street_address") @db.VarChar(255)
+  city          String      @db.VarChar(255)
+  state         String?     @db.VarChar(255)
+  postalCode    String?     @map("postal_code") @db.VarChar(255)
+  country       String      @db.VarChar(255)
+  addressType   AddressType @map("address_type")
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@map("addresses")
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  SOLD
+  REMOVED
+  DELETING
+}
+
+model Product {
+  productId   String  @id @default(uuid()) @map("product_id") @db.Char(36)
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+
+  sellerId String @map("seller_id") @db.Char(36)
+  seller   User   @relation("Seller_Sell_Products", fields: [sellerId], references: [userId], onDelete: Cascade)
+
+  status        ProductStatus @default(INACTIVE)
+  stockQuantity Int           @default(0) @map("stock_quantity")
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  productCategories ProductCategory[] @relation("Products_Have_Categories")
+
+  images ProductImage[] @relation("Product_Has_Images")
+
+  auctionId String?  @map("auction_id") @db.Char(36)
+  auction   Auction? @relation("Auction_Has_Products", fields: [auctionId], references: [auctionId], onDelete: SetNull)
+
+  @@map("products")
+}
+
+enum CategoryType {
+  ELECTRONICS
+  FASHION
+  COLLECTIBLES
+  HOME_APPLIANCES
+  SPORTS_EQUIPMENT
+  TOYS_AND_GAMES
+  VEHICLES
+  REAL_ESTATE
+  ART_AND_CRAFTS
+  JEWELRY_AND_ACCESSORIES
+  HEALTH_AND_BEAUTY
+  GARDEN_AND_OUTDOORS
+  MUSIC_INSTRUMENTS
+  PET_SUPPLIES
+  OFFICE_SUPPLIES
+}
+
+model Category {
+  categoryId String       @id @default(uuid()) @map("category_id") @db.Char(36)
+  name       CategoryType
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt  DateTime     @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  productCategories ProductCategory[] @relation("Categories_Contain_Products")
+
+  @@map("categories")
+}
+
+model ProductCategory {
+  productId String  @map("product_id") @db.Char(36)
+  product   Product @relation("Products_Have_Categories", fields: [productId], references: [productId], onDelete: Cascade)
+
+  categoryId String   @map("category_id") @db.Char(36)
+  category   Category @relation("Categories_Contain_Products", fields: [categoryId], references: [categoryId], onDelete: Cascade)
+
+  @@id([productId, categoryId])
+  @@map("products_categories")
+}
+
+model ProductImage {
+  imageId String @id @default(uuid()) @map("product_image_id") @db.Char(36)
+
+  productId String  @map("product_id") @db.Char(36)
+  product   Product @relation("Product_Has_Images", fields: [productId], references: [productId], onDelete: Cascade)
+
+  imageUrl  String   @map("image_url") @db.VarChar(255)
+  isPrimary Boolean  @default(false) @map("is_primary")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@map("product_images")
+}
+
+enum AuctionStatus {
+  PENDING
+  READY
+  OPEN
+  CLOSED
+  CANCELED
+  COMPLETED
+  EXTENDED
+}
+
+model Auction {
+  auctionId String @id @default(uuid()) @map("auction_id") @db.Char(36)
+  title     String @db.VarChar(255)
+
+  products Product[] @relation("Auction_Has_Products")
+
+  startTime     DateTime @map("start_time") @db.Timestamp(0)
+  endTime       DateTime @map("end_time") @db.Timestamp(0)
+  currentPrice  Decimal  @map("current_price") @db.Decimal(10, 2)
+  startingPrice Decimal  @map("starting_price") @db.Decimal(10, 2)
+
+  winnerId String? @map("winner_id") @db.Char(36)
+  winner   User?   @relation("User_Wins_Auctions", fields: [winnerId], references: [userId], onDelete: SetNull)
+
+  status              AuctionStatus @default(PENDING)
+  minimumBidIncrement Decimal       @map("minimum_bid_increment") @db.Decimal(10, 2)
+  lastBidTime         DateTime      @map("last_bid_time") @db.Timestamp(0)
+  bidCount            BigInt        @default(0) @map("bid_count")
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  bids Bid[] @relation("Auction_Has_Bids")
+
+  payment Payment? @relation("Auction_Has_Payment")
+
+  @@map("auctions")
+}
+
+enum BidStatus {
+  PENDING
+  VALID
+  INVALID
+}
+
+model Bid {
+  bidId String @id @default(uuid()) @map("bid_id") @db.Char(36)
+
+  auctionId String  @map("auction_id") @db.Char(36)
+  auction   Auction @relation("Auction_Has_Bids", fields: [auctionId], references: [auctionId], onDelete: Cascade)
+
+  userId String @map("user_id") @db.Char(36)
+  user   User   @relation("User_Has_Bids", fields: [userId], references: [userId], onDelete: Cascade)
+
+  bidAmount Decimal   @map("bid_amount") @db.Decimal(19, 4)
+  status    BidStatus
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@map("bids")
+}
+
+enum PaymentMethod {
+  VNPAY
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model Payment {
+  auctionId String  @id @map("auction_id") @db.Char(36)
+  auction   Auction @relation("Auction_Has_Payment", fields: [auctionId], references: [auctionId], onDelete: Cascade)
+
+  userId String @map("user_id") @db.Char(36)
+  user   User   @relation("User_Has_Payments", fields: [userId], references: [userId], onDelete: Cascade)
+
+  amount        Decimal       @db.Decimal(19, 4)
+  paymentMethod PaymentMethod @map("payment_method")
+  status        PaymentStatus @map("status")
+  bankCode      String?       @map("bank_code") @db.VarChar(255)
+  paymentDate   DateTime?     @map("payment_date") @db.Timestamp(0)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@map("payments")
+}
