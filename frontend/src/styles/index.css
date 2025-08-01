@@ -82,20 +82,7 @@ body {
   }
 }
 
-.register .content {
-  position: relative;
-}
-.register .content::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 40vh;
-  background-image: url("../../public/images/common/bg.png");
-  background-size: cover;
-  background-repeat: no-repeat;
-}
+
 
 @keyframes float {
   0% {
