@@ -126,3 +126,8 @@ export const ERROR_FOLLOW_FAILED = {
   code: 'FOLLOW_FAILED',
   message: 'Failed to follow seller',
 };
+
+export const ERROR_NO_PRODUCTS_PROVIDED = {
+  code: 'NO_PRODUCTS_PROVIDED',
+  message: 'No products were provided',
+};
