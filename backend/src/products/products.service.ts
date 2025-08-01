@@ -5,6 +5,8 @@ import { CreateMultipleProductsDto, CreateProductDto } from './dtos/create-produ
 import PrismaService from '@common/services/prisma.service';
 import { User } from '@prisma/client';
 import { CreateMultipleProductsResponseDto, CreateProductResponseDto } from './dtos/create-product.response.dto';
+import { UpdateProductDto } from './dtos/update-product.body.dto';
+import { MultipleProductsResponseDto } from './dtos/product.response.dto';
 
 @Injectable()
 export class ProductsService {
@@ -47,6 +49,33 @@ export class ProductsService {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       throw new BadRequestException(`Failed to upload image: ${errorMessage}`);
     }
+  }
+
+  async getProductsByUserId(userId: string): Promise<MultipleProductsResponseDto> {
+    const products = await this.prisma.product.findMany({
+      where: { sellerId: userId },
+      select: {
+        productId: true,
+        name: true,
+        description: true,
+        stockQuantity: true,
+        status: true,
+        images: {
+          select: {
+            imageUrl: true,
+            isPrimary: true,
+          },
+        },
+      },
+    });
+    return ({
+      products: products.map(product => ({
+        ...product,
+        description: product.description ?? undefined,
+      })),
+      count: products.length,
+      message: 'Products retrieved successfully',
+    });
   }
 
   async createMultipleProducts(currUser: User, products: CreateProductDto[]): Promise<CreateMultipleProductsResponseDto> {
@@ -106,5 +135,73 @@ export class ProductsService {
       count: createdProducts.length,
       message: 'Products created successfully',
     };
+  }
+
+  async updateMultipleProducts(data: UpdateProductDto[]): Promise<MultipleProductsResponseDto> {
+    const updatedProducts: any[] = [];
+    for (const product of data) {
+      const updatedProduct = await this.prisma.product.update({
+        where: { productId: product.productId },
+        data: {
+          name: product.name,
+          description: product.description,
+          stockQuantity: product.stockQuantity,
+        },
+      });
+      if (product.imageUrls && product.imageUrls.length > 0) {
+        const imageData = product.imageUrls.map((url, index) => ({
+          productId: product.productId,
+          imageUrl: url,
+          isPrimary: index === 0, // Ảnh đầu tiên làm primary
+        }));
+
+        await this.prisma.productImage.createMany({
+          data: imageData,
+        });
+      }
+
+      const updatedProductWithImages = await this.prisma.product.findUnique({
+        where: { productId: product.productId },
+        select: {
+          productId: true,
+          name: true,
+          description: true,
+          stockQuantity: true,
+          status: true,
+          images: {
+            select: {
+              imageUrl: true,
+              isPrimary: true,
+            },
+          },
+        }
+      });
+
+      if (updatedProductWithImages) {
+        updatedProducts.push({
+          ...updatedProductWithImages,
+          description: updatedProductWithImages.description ?? undefined,
+        });
+      }
+    }
+    return {
+      products: updatedProducts,
+      count: updatedProducts.length,
+      message: 'Products updated successfully',
+    };
+  }
+
+  async deleteMultipleProducts(productIds: string[]): Promise<string> {
+    try {
+      await this.prisma.product.deleteMany({
+        where: {
+          productId: { in: productIds },
+        },
+      });
+      return 'Products deleted successfully';
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      throw new BadRequestException(`Failed to delete products: ${errorMessage}`);
+    }
   }
 }

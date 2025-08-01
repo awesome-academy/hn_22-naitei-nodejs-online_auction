@@ -21,6 +21,11 @@ import { UploadImageDto, UploadImageResponseDto } from './dtos/upload-image.dto'
 import { CreateMultipleProductsDto } from './dtos/create-product.body.dto';
 import { User } from '@prisma/client';
 import { CurrentUser } from '@common/decorators/user.decorator';
+import { UpdateMultipleProductsDto } from './dtos/update-product.body.dto';
+import { ERROR_NO_PRODUCTS_PROVIDED } from '@common/constants/error.constant';
+import { AuthType } from '@common/types/auth-type.enum';
+import { Auth } from '@common/decorators/auth.decorator';
+import { MultipleProductOwnerGuard } from '@common/guards/products-owner.guard';
 
 @Controller('products')
 @UseGuards(JwtAuthGuard, RoleGuard)
@@ -46,5 +51,35 @@ export class ProductsController {
   async createMultipleProducts(@CurrentUser() currentUser: User, @Body() createMultipleProductsDto: CreateMultipleProductsDto) {
     console.log('Current User:', currentUser);
     return this.productsService.createMultipleProducts(currentUser,createMultipleProductsDto.products);
+  }
+
+  @Auth(AuthType.NONE)
+  @Get('user/:userId')
+  async getProductsByUserId(@Param('userId') userId: string) {
+    return this.productsService.getProductsByUserId(userId);
+  }
+
+  @Get('my-products')
+  @Roles(Role.ADMIN, Role.SELLER)
+  async getMyProducts(@CurrentUser() currentUser: any) {
+    return this.productsService.getProductsByUserId(currentUser.id);
+  }
+
+  @Put()
+  @UseGuards(MultipleProductOwnerGuard)
+  @Roles(Role.ADMIN, Role.SELLER)
+  async updateMultipleProducts(@Body() updateMultipleProductsDto: UpdateMultipleProductsDto) {
+    return this.productsService.updateMultipleProducts(updateMultipleProductsDto.products);
+  }
+
+  @Delete(':productIds')
+  @UseGuards(MultipleProductOwnerGuard)
+  @Roles(Role.ADMIN, Role.SELLER)
+  async deleteMultipleProducts(@Param('productIds') productIds: string) {
+    const ids = productIds.split(',').map(id => id.trim());
+    if (ids.length === 0) {
+      throw new BadRequestException(ERROR_NO_PRODUCTS_PROVIDED);
+    }
+    return this.productsService.deleteMultipleProducts(ids);
   }
 }
