@@ -28,6 +28,10 @@ model User {
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
 
+  warnings     Warning[] @relation("UserWarnings")
+  adminWarnings Warning[] @relation("AdminWarnings")
+  warningCount Int       @default(0)
+
   followings Follow[] @relation("Users_Follow_Sellers")
   followers  Follow[] @relation("Sellers_FollowedBy_Users")
 
@@ -44,6 +48,20 @@ model User {
   payment Payment[] @relation("User_Has_Payments")
 
   @@map("users")
+}
+
+model Warning {
+  warningId    String   @id @default(uuid())
+  userId       String
+  adminId      String
+  reason       String
+  description  String?
+  createdAt    DateTime @default(now())
+
+  user         User     @relation("UserWarnings", fields: [userId], references: [userId], onDelete: Cascade)
+  admin        User     @relation("AdminWarnings", fields: [adminId], references: [userId])
+
+  @@map("warnings")
 }
 
 model Follow {
