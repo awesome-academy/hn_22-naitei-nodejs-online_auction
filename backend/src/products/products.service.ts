@@ -148,6 +148,7 @@ export class ProductsService {
           name: product.name,
           description: product.description,
           stockQuantity: product.stockQuantity,
+          status: product.status
         },
       });
       if (product.imageUrls && product.imageUrls.length > 0) {
