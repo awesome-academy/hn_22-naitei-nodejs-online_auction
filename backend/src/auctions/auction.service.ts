@@ -12,6 +12,7 @@ import {
   ERROR_AUCTION_NOT_PENDING,
   ERROR_AUCTION_START_TIME_IN_PAST,
   ERROR_INVALID_AUCTION_TIME,
+  ERROR_PRODUCT_NOT_AVAILABLE,
   ERROR_PRODUCT_NOT_FOUND,
   ERROR_PRODUCT_STOCK_INSUFFICIENT,
 } from './auction.constant';
@@ -36,6 +37,7 @@ export class AuctionService {
   constructor(private readonly prisma: PrismaService) { }
 
   async createAuction(
+    user: any,
     dto: CreateAuctionDto,
   ): Promise<CreateAuctionResponseDto> {
     const {
@@ -76,6 +78,12 @@ export class AuctionService {
         const product = productMap.get(productId);
         if (!product) continue;
 
+        if (product.status !== 'ACTIVE') {
+          const { statusCode, message, errorCode } =
+            ERROR_PRODUCT_NOT_AVAILABLE(product.name);
+          throw new BadRequestException({ statusCode, message, errorCode });
+        }
+
         if (product.stockQuantity < quantity) {
           const { statusCode, message, errorCode } =
             ERROR_PRODUCT_STOCK_INSUFFICIENT(productId);
@@ -100,6 +108,7 @@ export class AuctionService {
           minimumBidIncrement,
           lastBidTime: new Date(startTime),
           status: AuctionStatus.PENDING,
+          sellerId: user.id,
         },
       });
 
@@ -134,7 +143,7 @@ export class AuctionService {
   ): Promise<SearchAuctionResponseDto> {
     const where: Prisma.AuctionWhereInput = {
       ...(query.sellerId && {
-        auctionProducts: { some: { product: { sellerId: query.sellerId } } },
+        sellerId: query.sellerId,
       }),
       ...(query.title && {
         title: { contains: query.title },
@@ -199,6 +208,12 @@ export class AuctionService {
     const auction = await this.prisma.auction.findUnique({
       where: { auctionId },
       include: {
+        seller: {
+          select: {
+            userId: true,
+            profile: { select: { fullName: true } },
+          },
+        },
         winner: {
           select: {
             userId: true,
@@ -212,12 +227,6 @@ export class AuctionService {
                 productId: true,
                 name: true,
                 description: true,
-                seller: {
-                  select: {
-                    userId: true,
-                    profile: { select: { fullName: true } },
-                  },
-                },
                 images: { select: { imageUrl: true, imageId: true } },
                 productCategories: {
                   select: {
@@ -259,9 +268,8 @@ export class AuctionService {
       currentPrice: auction.currentPrice.toString(),
       minimumBidIncrement: auction.minimumBidIncrement.toString(),
       status: auction.status,
-      sellerId: auction.auctionProducts?.[0]?.product?.seller?.userId ?? null,
-      sellerName:
-        auction.auctionProducts?.[0]?.product?.seller?.profile?.fullName ?? '',
+      sellerId: auction.seller.userId,
+      sellerName: auction.seller.profile?.fullName ?? '',
       lastBidTime: auction.bids?.[0]?.createdAt ?? null,
       winnerId: auction.winner?.userId ?? undefined,
       winnerName: auction.winner?.profile?.fullName ?? undefined,

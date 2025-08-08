@@ -19,23 +19,25 @@ import { SearchAuctionQueryDto } from './dtos/search-auction.query.dto';
 import { SearchAuctionResponseDto } from './dtos/search-auction.response.dto';
 import { Public } from '@common/decorators/public.decorator';
 import { GetAuctionDetailResponseDto } from './dtos/get-auction-detail.response.dto';
-import { ERROR_AUCTION_NOT_FOUND } from './auction.constant';
+import { ERROR_AUCTION_NOT_FOUND, MAX_AUCTIONS_NUMBERS } from './auction.constant';
 import { CurrentUser } from '@common/decorators/user.decorator';
 import { AddToWatchlistResponseDto } from './dtos/add-to-watchlist.response.dto';
 import { AddToWatchlistDto } from './dtos/add-to-watchlist.body.dto';
 import { RemoveFromWatchlistDto, RemoveFromWatchlistResponseDto } from './dtos/remove-from-watchlist.dto';
+import { SortDirection } from '@common/types/sort-direction.enum';
 
 @Controller('auctions')
 export class AuctionController {
-  constructor(private readonly auctionService: AuctionService) {}
+  constructor(private readonly auctionService: AuctionService) { }
 
   @Post()
   @Roles(Role.SELLER)
   @HttpCode(HttpStatus.CREATED)
   async createAuction(
     @Body() createAuctionDto: CreateAuctionDto,
+    @CurrentUser() user: any,
   ): Promise<CreateAuctionResponseDto> {
-    return this.auctionService.createAuction(createAuctionDto);
+    return this.auctionService.createAuction(user, createAuctionDto);
   }
 
   @Get()
@@ -45,6 +47,20 @@ export class AuctionController {
     @Query() query: SearchAuctionQueryDto,
   ): Promise<SearchAuctionResponseDto> {
     return this.auctionService.searchAuctions(query);
+  }
+
+  @Roles(Role.SELLER)
+  @Get('my-auctions')
+  async getMyAuctions(
+    @CurrentUser() user: any,
+  ): Promise<SearchAuctionResponseDto> {
+    return this.auctionService.searchAuctions({
+      sellerId: user.id,
+      page: 0,
+      size: MAX_AUCTIONS_NUMBERS,
+      sortField: 'createdAt',
+      sortDirection: SortDirection.DESC
+    } as SearchAuctionQueryDto);
   }
 
   @Get(':auctionId')
@@ -79,7 +95,7 @@ export class AuctionController {
   async closeAuction(@Param('auctionId') auctionId: string): Promise<void> {
     await this.auctionService.closeAuction(auctionId);
   }
-  
+
   @Roles(Role.BIDDER)
   @Post('add-to-watchlist')
   async addToWatchlist(

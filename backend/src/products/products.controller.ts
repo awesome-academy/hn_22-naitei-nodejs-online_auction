@@ -1,13 +1,13 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Put, 
-  Delete, 
-  UseGuards, 
-  Param, 
-  UseInterceptors, 
-  UploadedFile, 
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  UseGuards,
+  Param,
+  UseInterceptors,
+  UploadedFile,
   Body,
   BadRequestException,
   ParseUUIDPipe,
@@ -32,7 +32,7 @@ import { GetProductResponseDto } from './dtos/get-product.response.dto';
 @Controller('products')
 @UseGuards(JwtAuthGuard, RoleGuard)
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(private readonly productsService: ProductsService) { }
 
   // Upload product image endpoint
   @Post('upload')
@@ -45,14 +45,14 @@ export class ProductsController {
     if (!file) {
       throw new BadRequestException('No image file provided');
     }
-    
+
     return await this.productsService.uploadProductImage(file, uploadImageDto);
   }
-  
+
   @Post()
   async createMultipleProducts(@CurrentUser() currentUser: User, @Body() createMultipleProductsDto: CreateMultipleProductsDto) {
     console.log('Current User:', currentUser);
-    return this.productsService.createMultipleProducts(currentUser,createMultipleProductsDto.products);
+    return this.productsService.createMultipleProducts(currentUser, createMultipleProductsDto.products);
   }
 
   @Auth(AuthType.NONE)
@@ -65,6 +65,12 @@ export class ProductsController {
   @Roles(Role.ADMIN, Role.SELLER)
   async getMyProducts(@CurrentUser() currentUser: any) {
     return this.productsService.getProductsByUserId(currentUser.id);
+  }
+
+  @Get('my-products/active')
+  @Roles(Role.ADMIN, Role.SELLER)
+  async getMyActiveProducts(@CurrentUser() currentUser: any) {
+    return this.productsService.getActiveProductsByUserId(currentUser.id);
   }
 
   @Put()

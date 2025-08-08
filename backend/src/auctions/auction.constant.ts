@@ -45,3 +45,11 @@ export const ERROR_AUCTION_NOT_CLOSABLE = {
   message: 'Only auctions in OPEN or EXTENDED status can be closed.',
   errorCode: 'AUCTION_NOT_CLOSABLE',
 };
+
+export const ERROR_PRODUCT_NOT_AVAILABLE = (productId: string) => ({
+  statusCode: 404,
+  message: `Product not available: ${productId}`,
+  errorCode: 'PRODUCT_NOT_AVAILABLE',
+});
+
+export const MAX_AUCTIONS_NUMBERS = Number.MAX_SAFE_INTEGER;

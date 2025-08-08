@@ -80,6 +80,37 @@ export class ProductsService {
     });
   }
 
+  async getActiveProductsByUserId(userId: string): Promise<MultipleProductsResponseDto> {
+    const products = await this.prisma.product.findMany({
+      where: {
+        sellerId: userId,
+        status: 'ACTIVE',
+        stockQuantity: { gt: 0 } 
+      },
+      select: {
+        productId: true,
+        name: true,
+        description: true,
+        stockQuantity: true,
+        status: true,
+        images: {
+          select: {
+            imageUrl: true,
+            isPrimary: true,
+          },
+        },
+      },
+    });
+    return ({
+      products: products.map(product => ({
+        ...product,
+        description: product.description ?? undefined,
+      })),
+      count: products.length,
+      message: 'Active products retrieved successfully',
+    });
+  }
+
   async createMultipleProducts(currUser: User, products: CreateProductDto[]): Promise<CreateMultipleProductsResponseDto> {
     const createdProducts: CreateProductResponseDto[] = [];
     for (const product of products) {
@@ -148,6 +179,7 @@ export class ProductsService {
           name: product.name,
           description: product.description,
           stockQuantity: product.stockQuantity,
+          status: product.status
         },
       });
       if (product.imageUrls && product.imageUrls.length > 0) {

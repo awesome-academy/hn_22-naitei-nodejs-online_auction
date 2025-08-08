@@ -41,6 +41,8 @@ model User {
 
   products Product[] @relation("Seller_Sell_Products")
 
+  createdAuctions Auction[] @relation("Seller_Creates_Auctions")
+
   auctions Auction[] @relation("User_Wins_Auctions")
 
   bid Bid[] @relation("User_Has_Bids")
@@ -218,6 +220,9 @@ enum AuctionStatus {
 model Auction {
   auctionId String @id @default(uuid()) @map("auction_id") @db.Char(36)
   title     String @db.VarChar(255)
+
+  sellerId String @map("seller_id") @db.Char(36)
+  seller   User   @relation("Seller_Creates_Auctions", fields: [sellerId], references: [userId], onDelete: Cascade)
 
   auctionProducts AuctionProduct[] @relation("Auction_Has_Products")
 

@@ -1,5 +1,6 @@
 import { IsString, IsNotEmpty, IsOptional, IsArray, IsUrl, MaxLength, ValidateNested, IsNumber, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
+import { Product, ProductStatus } from '@prisma/client';
 
 export class UpdateProductDto {
 
@@ -11,6 +12,11 @@ export class UpdateProductDto {
   @IsOptional()
   @MaxLength(255)
   name!: string;
+
+
+  @IsOptional()
+  @IsString()
+  status?: ProductStatus;
 
   @IsOptional()
   @IsString()

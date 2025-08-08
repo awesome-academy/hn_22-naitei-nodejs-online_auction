@@ -6,9 +6,9 @@ export const ProductTable = ({ products, onEdit, onDelete, onToggleStatus, toggl
   const getStatusBadge = (status) => {
     const config = getProductStatusConfig(status);
     const IconComponent = config.icon;
-    
+
     return (
-      <span 
+      <span
         className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${config.bg} ${config.text}`}
         title={config.tooltip}
       >
@@ -20,7 +20,7 @@ export const ProductTable = ({ products, onEdit, onDelete, onToggleStatus, toggl
 
   const getCategoryBadges = (categories) => {
     if (!categories || categories.length === 0) return null;
-    
+
     return (
       <div className="flex flex-wrap gap-1">
         {categories.map((category, index) => (
@@ -110,25 +110,24 @@ export const ProductTable = ({ products, onEdit, onDelete, onToggleStatus, toggl
                   {/* Toggle Status Button */}
                   <button
                     onClick={() => onToggleStatus && onToggleStatus(product)}
-                    className={`p-1 transition-colors duration-200 ${
-                      product.status === PRODUCT_STATUS.DELETING || product.status === PRODUCT_STATUS.REMOVED || product.status === PRODUCT_STATUS.SOLD || toggleLoading === product.productId
-                        ? 'text-gray-300 cursor-not-allowed' 
+                    className={`p-2 rounded-md transition-colors duration-200 ${product.status === PRODUCT_STATUS.DELETING || product.status === PRODUCT_STATUS.REMOVED || product.status === PRODUCT_STATUS.SOLD || toggleLoading === product.productId
+                        ? 'text-gray-300 bg-gray-100 cursor-not-allowed'
                         : product.status === PRODUCT_STATUS.ACTIVE
-                        ? 'text-green-600 hover:text-green-700'
-                        : 'text-red-600 hover:text-red-700'
-                    }`}
+                          ? 'text-green-600 bg-green-50 hover:bg-green-100 hover:text-green-700'
+                          : 'text-orange-600 bg-orange-50 hover:bg-orange-100 hover:text-orange-700'
+                      }`}
                     title={
                       toggleLoading === product.productId
                         ? 'Updating status...'
-                        : product.status === PRODUCT_STATUS.DELETING 
-                        ? 'Cannot change status while deleting' 
-                        : product.status === PRODUCT_STATUS.REMOVED
-                        ? 'Cannot change status of removed product'
-                        : product.status === PRODUCT_STATUS.SOLD
-                        ? 'Cannot change status of sold product'
-                        : product.status === PRODUCT_STATUS.ACTIVE
-                        ? 'Deactivate Product'
-                        : 'Activate Product'
+                        : product.status === PRODUCT_STATUS.DELETING
+                          ? 'Cannot change status while deleting'
+                          : product.status === PRODUCT_STATUS.REMOVED
+                            ? 'Cannot change status of removed product'
+                            : product.status === PRODUCT_STATUS.SOLD
+                              ? 'Cannot change status of sold product'
+                              : product.status === PRODUCT_STATUS.ACTIVE
+                                ? 'Deactivate Product'
+                                : 'Activate Product'
                     }
                     disabled={product.status === PRODUCT_STATUS.DELETING || product.status === PRODUCT_STATUS.REMOVED || product.status === PRODUCT_STATUS.SOLD || toggleLoading === product.productId}
                   >
@@ -140,35 +139,33 @@ export const ProductTable = ({ products, onEdit, onDelete, onToggleStatus, toggl
                       <IoCloseCircleOutline size={16} />
                     )}
                   </button>
-                  
+
                   {/* Edit Button */}
                   <button
                     onClick={() => onEdit && onEdit(product)}
-                    className={`p-1 transition-colors duration-200 ${
-                      product.status === PRODUCT_STATUS.DELETING 
-                        ? 'text-gray-300 cursor-not-allowed' 
-                        : 'text-gray-400 hover:text-green-600'
-                    }`}
+                    className={`p-2 rounded-md transition-colors duration-200 ${product.status === PRODUCT_STATUS.DELETING
+                        ? 'text-gray-300 bg-gray-100 cursor-not-allowed'
+                        : 'text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700'
+                      }`}
                     title={product.status === PRODUCT_STATUS.DELETING ? 'Cannot edit while deleting' : 'Edit Product'}
                     disabled={product.status === PRODUCT_STATUS.DELETING}
                   >
                     <IoCreateOutline size={16} />
                   </button>
-                  
+
                   {/* Delete Button */}
                   <button
                     onClick={() => onDelete && onDelete(product)}
-                    className={`p-1 transition-colors duration-200 ${
-                      product.status === PRODUCT_STATUS.DELETING || product.status === PRODUCT_STATUS.REMOVED
-                        ? 'text-gray-300 cursor-not-allowed' 
-                        : 'text-gray-400 hover:text-red-600'
-                    }`}
+                    className={`p-2 rounded-md transition-colors duration-200 ${product.status === PRODUCT_STATUS.DELETING || product.status === PRODUCT_STATUS.REMOVED
+                        ? 'text-gray-300 bg-gray-100 cursor-not-allowed'
+                        : 'text-red-600 bg-red-50 hover:bg-red-100 hover:text-red-700'
+                      }`}
                     title={
-                      product.status === PRODUCT_STATUS.DELETING 
-                        ? 'Already deleting' 
+                      product.status === PRODUCT_STATUS.DELETING
+                        ? 'Already deleting'
                         : product.status === PRODUCT_STATUS.REMOVED
-                        ? 'Already removed'
-                        : 'Delete Product'
+                          ? 'Already removed'
+                          : 'Delete Product'
                     }
                     disabled={product.status === PRODUCT_STATUS.DELETING || product.status === PRODUCT_STATUS.REMOVED}
                   >
