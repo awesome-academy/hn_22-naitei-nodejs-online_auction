@@ -8,6 +8,7 @@ import {
   ERROR_USER_NOT_FOUND,
   ERROR_USER_ALREADY_BANNED,
   ERROR_WARNING_NOT_FOUND,
+  ERROR_USER_NOT_BANNED,
 } from '@common/constants/error.constant';
 import { CreateWarningDto } from './dtos/create.warning.dto';
 import { UserWarningStatusDto } from './dtos/warning.response.dto';
@@ -17,10 +18,11 @@ import {
   DEFAULT_LIMIT,
   DEFAULT_PAGE,
 } from '@common/constants/pagination.constant';
+import { BanUserResponseDto } from './dtos/ban-user-response.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async findUserById(userId: string): Promise<User | null> {
     return this.prisma.user.findUnique({
@@ -78,10 +80,10 @@ export class UsersService {
         updatedAt: user.updatedAt,
         profile: user.profile
           ? {
-              fullName: user.profile.fullName || undefined,
-              phoneNumber: user.profile.phoneNumber || undefined,
-              profileImageUrl: user.profile.profileImageUrl || undefined,
-            }
+            fullName: user.profile.fullName || undefined,
+            phoneNumber: user.profile.phoneNumber || undefined,
+            profileImageUrl: user.profile.profileImageUrl || undefined,
+          }
           : undefined,
       })),
       pagination: {
@@ -253,6 +255,72 @@ export class UsersService {
       message: result.user.isBanned
         ? `Warning removed. User still banned (${result.user.warningCount}/3 warnings)`
         : `Warning removed successfully. User unbanned (${result.user.warningCount}/3 warnings)`,
+    };
+  }
+
+  async banUser(
+    userId: string,
+    adminId: string,
+  ): Promise<BanUserResponseDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(ERROR_USER_NOT_FOUND);
+    }
+
+    if (user.isBanned) {
+      throw new ForbiddenException(ERROR_USER_ALREADY_BANNED);
+    }
+
+    // ✅ Simply set isBanned to true
+    const updatedUser = await this.prisma.user.update({
+      where: { userId },
+      data: {
+        isBanned: true,
+      },
+    });
+
+    return {
+      userId: updatedUser.userId,
+      email: updatedUser.email,
+      isBanned: updatedUser.isBanned,
+      warningCount: updatedUser.warningCount,
+      bannedAt: updatedUser.updatedAt,
+      message: 'User has been banned successfully',
+    };
+  }
+
+  async unbanUser(
+    userId: string,
+    adminId: string,
+  ): Promise<BanUserResponseDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(ERROR_USER_NOT_FOUND);
+    }
+
+    if (!user.isBanned) {
+      throw new ForbiddenException(ERROR_USER_NOT_BANNED);
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { userId },
+      data: {
+        isBanned: false,
+      },
+    });
+
+    return {
+      userId: updatedUser.userId,
+      email: updatedUser.email,
+      isBanned: updatedUser.isBanned,
+      warningCount: updatedUser.warningCount,
+      message: 'User has been unbanned successfully',
     };
   }
 }

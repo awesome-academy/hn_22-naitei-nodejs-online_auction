@@ -131,6 +131,11 @@ export const ERROR_USER_ALREADY_BANNED = {
   message: 'User is already banned',
 };
 
+export const ERROR_USER_NOT_BANNED = {
+  message: 'User is not banned',
+  code: 'USER_NOT_BANNED',
+};
+
 export const ERROR_ADMIN_REQUIRED = {
   code: 'ADMIN_REQUIRED',
   message: 'You must be an admin to perform this action',
@@ -167,7 +172,7 @@ export const ERROR_AUTION_NOT_FOUND = {
 };
 
 export const ERROR_AUTION_CANT_BE_ADDED_TO_WATCHLIST = {
-  code: 'AUCTION_CANT_BE_ADDED_TO_WATCHLIST', 
+  code: 'AUCTION_CANT_BE_ADDED_TO_WATCHLIST',
   message: 'Auction cannot be added to watchlist',
 };
 
