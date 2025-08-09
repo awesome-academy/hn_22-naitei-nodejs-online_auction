@@ -25,10 +25,11 @@ import {
   DEFAULT_LIMIT,
   DEFAULT_PAGE,
 } from '@common/constants/pagination.constant';
+import { BanUserResponseDto } from './dtos/ban-user-response.dto';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @Get()
   @Auth(AuthType.ACCESS_TOKEN)
@@ -80,5 +81,27 @@ export class UsersController {
     @CurrentUser() _admin: { role: string },
   ): Promise<UserWarningStatusDto> {
     return this.usersService.removeWarning(warningId);
+  }
+
+  @Post('ban/:id')
+  @Auth(AuthType.ACCESS_TOKEN)
+  @Roles(Role.ADMIN)
+  @UseGuards(RoleGuard)
+  async banUser(
+    @Param('id') userId: string,
+    @CurrentUser() admin: { id: string; email: string; role: string },
+  ): Promise<BanUserResponseDto> {
+    return this.usersService.banUser(userId, admin.id);
+  }
+
+  @Post('unban/:id')
+  @Auth(AuthType.ACCESS_TOKEN)
+  @Roles(Role.ADMIN)
+  @UseGuards(RoleGuard)
+  async unbanUser(
+    @Param('id') userId: string,
+    @CurrentUser() admin: { id: string; email: string; role: string },
+  ): Promise<BanUserResponseDto> {
+    return this.usersService.unbanUser(userId, admin.id);
   }
 }

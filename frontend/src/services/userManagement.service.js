@@ -5,6 +5,8 @@ const USER_MANAGEMENT_API = {
   CREATE_WARNING: (userId) => `/api/users/warnings/${userId}`,
   GET_USER_WARNINGS: (userId) => `/api/users/warnings/${userId}`,
   REMOVE_WARNING: (warningId) => `/api/users/warnings/${warningId}`,
+  BAN_USER: (userId) => `/api/users/ban/${userId}`,
+  UNBAN_USER: (userId) => `/api/users/unban/${userId}`,
 };
 
 export const userManagementService = {
@@ -97,17 +99,50 @@ export const userManagementService = {
     }
   },
 
-  // Ban user - placeholder for future implementation
-  banUser: async (_userId, _reason) => {
-    // TODO: Implement ban user functionality
-    console.warn('Ban user feature is not implemented yet');
-    throw new Error('Ban user feature is not implemented yet');
+  // Ban user
+  banUser: async (userId) => {
+    try {
+      const url = USER_MANAGEMENT_API.BAN_USER(userId);
+
+      const response = await axiosClient.post(url);
+
+      return response.data;
+    } catch (err) {
+
+      const { message } = err?.response?.data || {};
+      throw {
+        response: {
+          data: {
+            message: message || 'Failed to ban user'
+          }
+        },
+        message: message || 'Failed to ban user',
+        statusCode: err?.response?.status || 500,
+      };
+    }
   },
 
-  // Unban user - placeholder for future implementation
-  unbanUser: async (_userId) => {
-    // TODO: Implement unban user functionality
-    console.warn('Unban user feature is not implemented yet');
-    throw new Error('Unban user feature is not implemented yet');
-  }
+  // Unban user - FIX THIS
+  unbanUser: async (userId) => {
+    try {
+      const url = USER_MANAGEMENT_API.UNBAN_USER(userId);
+      const response = await axiosClient.post(url);
+
+      return response.data;
+    } catch (err) {
+
+      const { message } = err?.response?.data || {};
+      throw {
+        response: {
+          data: {
+            message: message || 'Failed to unban user'
+          }
+        },
+        message: message || 'Failed to unban user',
+        statusCode: err?.response?.status || 500,
+      };
+    }
+  },
 };
+
+export const userManagement = userManagementService;

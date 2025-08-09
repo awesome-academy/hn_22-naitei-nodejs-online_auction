@@ -5,6 +5,8 @@ import { useNotification } from "@/contexts/NotificationContext";
 import UserManagementTable from "../components/UserManagementTable";
 import UserManagementFilters from "../components/UserManagementFilters";
 import WarningModal from "../components/WarningModal";
+import ConfirmBanModal from "../components/ConfirmBanModal";
+import ViewWarningsModal from "../components/ViewWarningsModal";
 import Pagination from "@/components/ui/Pagination";
 
 const BidderManagement = () => {
@@ -12,14 +14,24 @@ const BidderManagement = () => {
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Modal states
   const [warningModal, setWarningModal] = useState({ isOpen: false, user: null });
+  const [banModal, setBanModal] = useState({ isOpen: false, user: null });
+  const [viewWarningsModal, setViewWarningsModal] = useState({ isOpen: false, user: null, warnings: null });
+
+  // Loading states
+  const [isBanLoading, setIsBanLoading] = useState(false);
+  const [isViewWarningsLoading, setIsViewWarningsLoading] = useState(false);
+
+  // Filter states
   const [searchTerm, setSearchTerm] = useState("");
   const [period, setPeriod] = useState("all");
   const [searchBy, setSearchBy] = useState("all");
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState("desc");
   const [statusFilter, setStatusFilter] = useState("all");
-  
+
   // Pagination state
   const [pagination, setPagination] = useState({
     page: 1,
@@ -29,7 +41,7 @@ const BidderManagement = () => {
     hasNext: false,
     hasPrevious: false
   });
-  
+
   const { showToastNotification } = useNotification();
 
   const fetchBidders = useCallback(async (page = 1, limit = 10) => {
@@ -37,8 +49,7 @@ const BidderManagement = () => {
       setLoading(true);
       setError("");
       const response = await userManagementService.getUsersByRole("BIDDER", page, limit);
-      
-      // Handle the new API response structure
+
       setUsers(response.users || []);
       setPagination(response.pagination || {
         page: 1,
@@ -67,10 +78,10 @@ const BidderManagement = () => {
           case "email":
             return user.email?.toLowerCase().includes(searchLower);
           case "fullName":
-            return user.profile?.fullName?.toLowerCase().includes(searchLower) || 
+            return user.profile?.fullName?.toLowerCase().includes(searchLower) ||
                    user.fullName?.toLowerCase().includes(searchLower);
           case "phoneNumber":
-            return user.profile?.phoneNumber?.includes(searchTerm) || 
+            return user.profile?.phoneNumber?.includes(searchTerm) ||
                    user.phone?.includes(searchTerm);
           case "userId":
             return user.userId?.toString().includes(searchTerm);
@@ -93,7 +104,7 @@ const BidderManagement = () => {
     if (statusFilter !== "all") {
       const now = new Date();
       const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
-      
+
       filtered = filtered.filter(user => {
         switch (statusFilter) {
           case "active":
@@ -196,9 +207,111 @@ const BidderManagement = () => {
     setWarningModal({ isOpen: true, user });
   };
 
-  const handleBanUser = () => {
-    // Show coming soon alert instead of opening ban modal
-    showToastNotification("Ban user feature - Coming Soon!", "info");
+  const handleBanUser = (user) => {
+    setBanModal({ isOpen: true, user });
+  };
+
+  const handleUnbanUser = async (user) => {
+    if (!window.confirm(`Are you sure you want to unban ${user.profile?.fullName || user.email}?`)) {
+      return;
+    }
+
+    try {
+      const result = await userManagementService.unbanUser(user.userId);
+
+      // Update user in state
+      setUsers(prevUsers =>
+        prevUsers.map(u =>
+          u.userId === user.userId
+            ? { ...u, isBanned: false }
+            : u
+        )
+      );
+
+      showToastNotification(
+        result.message || `${user.profile?.fullName || user.email} has been unbanned`,
+        'success'
+      );
+    } catch (error) {
+      showToastNotification(error.message || 'Failed to unban user', 'error');
+    }
+  };
+
+  const handleViewWarnings = async (user) => {
+    setViewWarningsModal({ isOpen: true, user, warnings: null });
+    setIsViewWarningsLoading(true);
+
+    try {
+      const warnings = await userManagementService.getUserWarnings(user.userId);
+      setViewWarningsModal(prev => ({ ...prev, warnings }));
+    } catch (error) {
+      showToastNotification(error.message || 'Failed to load warnings', 'error');
+      setViewWarningsModal(prev => ({ ...prev, warnings: null }));
+    } finally {
+      setIsViewWarningsLoading(false);
+    }
+  };
+
+  const handleRemoveWarning = async (warningId) => {
+    try {
+      const result = await userManagementService.removeWarning(warningId);
+
+      // Update warnings in modal
+      setViewWarningsModal(prev => ({
+        ...prev,
+        warnings: {
+          ...prev.warnings,
+          warnings: prev.warnings.warnings.filter(w => w.warningId !== warningId),
+          warningCount: result.warningCount
+        }
+      }));
+
+      // Update user in state
+      setUsers(prevUsers =>
+        prevUsers.map(u =>
+          u.userId === viewWarningsModal.user.userId
+            ? {
+              ...u,
+              warningCount: result.warningCount,
+              isBanned: result.isBanned
+            }
+            : u
+        )
+      );
+
+      showToastNotification(result.message || 'Warning removed successfully', 'success');
+    } catch (error) {
+      showToastNotification(error.message || 'Failed to remove warning', 'error');
+    }
+  };
+
+  const handleConfirmBan = async () => {
+    if (!banModal.user) return;
+
+    setIsBanLoading(true);
+    try {
+      const result = await userManagementService.banUser(banModal.user.userId);
+
+      // Update user in state
+      setUsers(prevUsers =>
+        prevUsers.map(u =>
+          u.userId === banModal.user.userId
+            ? { ...u, isBanned: true }
+            : u
+        )
+      );
+
+      showToastNotification(
+        result.message || `${banModal.user.profile?.fullName || banModal.user.email} has been banned`,
+        'success'
+      );
+
+      setBanModal({ isOpen: false, user: null });
+    } catch (error) {
+      showToastNotification(error.message || 'Failed to ban user', 'error');
+    } finally {
+      setIsBanLoading(false);
+    }
   };
 
   const handleClearFilters = () => {
@@ -212,10 +325,8 @@ const BidderManagement = () => {
 
   const handleSortChange = (column) => {
     if (sortBy === column) {
-      // Toggle sort order if same column
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
-      // Set new column and default to desc
       setSortBy(column);
       setSortOrder("desc");
     }
@@ -223,10 +334,23 @@ const BidderManagement = () => {
 
   const handleWarningSubmit = async (warningData) => {
     try {
-      await userManagementService.createWarning(warningModal.user.userId, warningData);
-      showToastNotification("Warning created successfully", "success");
+      const result = await userManagementService.createWarning(warningModal.user.userId, warningData);
+
+      // Update user in state
+      setUsers(prevUsers =>
+        prevUsers.map(u =>
+          u.userId === warningModal.user.userId
+            ? {
+              ...u,
+              warningCount: result.warningCount,
+              isBanned: result.isBanned
+            }
+            : u
+        )
+      );
+
+      showToastNotification(result.message || "Warning created successfully", "success");
       setWarningModal({ isOpen: false, user: null });
-      fetchBidders(pagination.page, pagination.limit); // Refresh the list
     } catch (err) {
       showToastNotification(err.message || "Failed to create warning", "error");
     }
@@ -250,7 +374,7 @@ const BidderManagement = () => {
         <Title level={2} className="text-3xl font-bold text-gray-900">
           Manage Bidder
         </Title>
-        
+
         <div className="relative">
           <button className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-full flex items-center gap-2 transition-colors duration-200">
             Create auction
@@ -290,6 +414,8 @@ const BidderManagement = () => {
         users={filteredUsers}
         onCreateWarning={handleCreateWarning}
         onBanUser={handleBanUser}
+        onUnbanUser={handleUnbanUser}
+        onViewWarnings={handleViewWarnings}
         userType="bidder"
         sortBy={sortBy}
         sortOrder={sortOrder}
@@ -321,12 +447,29 @@ const BidderManagement = () => {
         </div>
       )}
 
-      {/* Warning Modal */}
+      {/* Modals */}
       <WarningModal
         isOpen={warningModal.isOpen}
         onClose={() => setWarningModal({ isOpen: false, user: null })}
         onSubmit={handleWarningSubmit}
         user={warningModal.user}
+      />
+
+      <ConfirmBanModal
+        isOpen={banModal.isOpen}
+        onClose={() => setBanModal({ isOpen: false, user: null })}
+        onConfirm={handleConfirmBan}
+        user={banModal.user}
+        isLoading={isBanLoading}
+      />
+
+      <ViewWarningsModal
+        isOpen={viewWarningsModal.isOpen}
+        onClose={() => setViewWarningsModal({ isOpen: false, user: null, warnings: null })}
+        user={viewWarningsModal.user}
+        warnings={viewWarningsModal.warnings}
+        onRemoveWarning={handleRemoveWarning}
+        isLoading={isViewWarningsLoading}
       />
     </div>
   );
