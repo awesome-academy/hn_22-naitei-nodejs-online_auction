@@ -6,6 +6,7 @@ import {
   Query,
   Body,
   UseGuards,
+  Delete,
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { Auth } from '@common/decorators/auth.decorator';
@@ -17,7 +18,7 @@ import { ListMessageQueryDto } from './dtos/list-message-query.dto';
 
 @Controller('chat')
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(private readonly chatService: ChatService) { }
 
   /**
    * Lấy danh sách chat rooms của user
@@ -97,5 +98,17 @@ export class ChatController {
     @CurrentUser() user: { id: string },
   ) {
     return await this.chatService.handleGetChatRoomDetails(chatRoomId, user.id);
+  }
+
+  /**
+   * Xoá đoạn chat
+   */
+  @Delete('rooms/:chatRoomId')
+  @Auth(AuthType.ACCESS_TOKEN)
+  async deleteChatRoom(
+    @Param('chatRoomId') chatRoomId: string,
+    @CurrentUser() user: { id: string },
+  ) {
+    return await this.chatService.handleDeleteChatRoom(chatRoomId, user.id);
   }
 }

@@ -50,7 +50,7 @@ model User {
   sentMessages      Message[]  @relation("UserSentMessages")
   chatRoomsAsUser1  ChatRoom[] @relation("User1ChatRooms")
   chatRoomsAsUser2  ChatRoom[] @relation("User2ChatRooms")
-  
+
   watchlist Watchlist[] @relation("User_Has_Watchlist")
 
   @@map("users")
@@ -339,6 +339,11 @@ model ChatRoom {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
 
   messages Message[] @relation("ChatRoom_Has_Messages")
+
+  deletedByUser1 Boolean   @default(false) @map("deleted_by_user1")
+  deletedByUser2 Boolean   @default(false) @map("deleted_by_user2")
+  user1DeletedAt DateTime? @map("user1_deleted_at") @db.Timestamp(0)
+  user2DeletedAt DateTime? @map("user2_deleted_at") @db.Timestamp(0)
 
   @@unique([user1Id, user2Id])
   @@map("chat_rooms")
