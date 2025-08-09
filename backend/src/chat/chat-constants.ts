@@ -159,6 +159,11 @@ export const ERROR_UNKNOWN = {
   message: 'Unknown error occurred',
 };
 
+export const ERROR_FAILED_TO_DELETE_CHAT_ROOM = {
+  code: 'FAILED_TO_DELETE_CHAT_ROOM',
+  message: 'Failed to delete chat room',
+};
+
 /////////////////////////////// Chat SUCCESS constants////////////////////////////////
 export const SUCCESS_MESSAGE_SENT = {
   code: 'MESSAGE_SENT_SUCCESS',
@@ -218,6 +223,11 @@ export const SUCCESS_CHAT_ROOM_DETAILS_RETRIEVED = {
 export const SUCCESS_NO_CHAT_ROOMS = {
   code: 'NO_CHAT_ROOMS_FOUND',
   message: 'No chat rooms found',
+};
+
+export const SUCCESS_CHAT_ROOM_DELETED = {
+  code: 'CHAT_ROOM_DELETED_SUCCESS',
+  message: 'Chat room deleted successfully',
 };
 
 // Chat validation constants

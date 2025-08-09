@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUser } from '@/contexts/UserContext.jsx';
 import { useNotification } from '@/contexts/NotificationContext.jsx';
-import chatService, { chatApiService } from '@/services/chat.service.js';
+import { chatApiService } from '@/services/chat.service.js';
+import { chatWebSocketService } from '@/services/chat-websocket.service.js';
 
 export const useChat = () => {
   const [rooms, setRooms] = useState([]);
@@ -98,8 +99,8 @@ export const useChat = () => {
       setMessages([]);
       await loadMessages(room.chatRoomId);
 
-      if (connected && chatService.isConnected) {
-        chatService.joinRoom(room.chatRoomId);
+      if (connected && chatWebSocketService.getConnectionStatus().isConnected) {
+        chatWebSocketService.joinRoom(room.chatRoomId);
       }
 
       setTimeout(() => {
@@ -115,10 +116,10 @@ export const useChat = () => {
     if (!currentRoom?.chatRoomId || !content.trim()) return;
 
     try {
-      if (connected && chatService.isConnected) {
-        chatService.sendMessageWS(currentRoom.chatRoomId, content.trim(), type);
+      if (connected && chatWebSocketService.getConnectionStatus().isConnected) {
+        chatWebSocketService.sendMessageWS(currentRoom.chatRoomId, content.trim(), type);
       } else {
-        const response = await chatService.sendMessage(currentRoom.chatRoomId, {
+        const response = await chatApiService.sendMessage(currentRoom.chatRoomId, {
           content: content.trim(),
           type
         });
@@ -169,7 +170,7 @@ export const useChat = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    chatService.connect();
+    chatWebSocketService.connect();
 
     const handleConnected = () => {
       setConnected(true);
@@ -252,34 +253,34 @@ export const useChat = () => {
       }
     };
 
-    chatService.on('connected', handleConnected);
-    chatService.on('disconnected', handleDisconnected);
-    chatService.on('error', handleError);
-    chatService.on('room_message', handleMessage);
-    chatService.on('private_message', handleMessage);
-    chatService.on('new_message', handleMessage);
-    chatService.on('message_sent', handleMessageSent);
-    chatService.on('room_joined', handleRoomJoined);
-    chatService.on('user_typing', handleUserTyping);
-    chatService.on('messages_read', handleMessagesRead);
+    chatWebSocketService.on('connected', handleConnected);
+    chatWebSocketService.on('disconnected', handleDisconnected);
+    chatWebSocketService.on('error', handleError);
+    chatWebSocketService.on('room_message', handleMessage);
+    chatWebSocketService.on('private_message', handleMessage);
+    chatWebSocketService.on('new_message', handleMessage);
+    chatWebSocketService.on('message_sent', handleMessageSent);
+    chatWebSocketService.on('room_joined', handleRoomJoined);
+    chatWebSocketService.on('user_typing', handleUserTyping);
+    chatWebSocketService.on('messages_read', handleMessagesRead);
 
     return () => {
-      chatService.off('connected', handleConnected);
-      chatService.off('disconnected', handleDisconnected);
-      chatService.off('error', handleError);
-      chatService.off('room_message', handleMessage);
-      chatService.off('private_message', handleMessage);
-      chatService.off('new_message', handleMessage);
-      chatService.off('message_sent', handleMessageSent);
-      chatService.off('room_joined', handleRoomJoined);
-      chatService.off('user_typing', handleUserTyping);
-      chatService.off('messages_read', handleMessagesRead);
+      chatWebSocketService.off('connected', handleConnected);
+      chatWebSocketService.off('disconnected', handleDisconnected);
+      chatWebSocketService.off('error', handleError);
+      chatWebSocketService.off('room_message', handleMessage);
+      chatWebSocketService.off('private_message', handleMessage);
+      chatWebSocketService.off('new_message', handleMessage);
+      chatWebSocketService.off('message_sent', handleMessageSent);
+      chatWebSocketService.off('room_joined', handleRoomJoined);
+      chatWebSocketService.off('user_typing', handleUserTyping);
+      chatWebSocketService.off('messages_read', handleMessagesRead);
 
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
 
-      chatService.disconnect();
+      chatWebSocketService.disconnect();
     };
   }, [user?.id, currentRoom, fetchRooms, fetchUnreadCount, showToastNotification, loadMessages]);
 

@@ -1,513 +1,244 @@
-import { io } from 'socket.io-client';
-import { getAccessToken } from "@/utils/token-storage.js";
+import axiosClient from "@/utils/axios.js";
 
-/**
- * Chat Service Class
- * Handles both REST API calls and WebSocket connections for chat functionality
- */
-class ChatService {
-  constructor() {
-    this.socket = null;
-    this.isConnected = false;
-    this.eventCallbacks = new Map();
-    this.baseURL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
-  }
+const CHAT_API = {
+  GET_ROOMS: '/api/chat/rooms',
+  CREATE_ROOM: '/api/chat/rooms',
+  GET_MESSAGES: (roomId) => `/api/chat/rooms/${roomId}/messages`,
+  SEND_MESSAGE: (roomId) => `/api/chat/rooms/${roomId}/messages`,
+  MARK_READ: (roomId) => `/api/chat/rooms/${roomId}/mark-read`,
+  UNREAD_COUNT: '/api/chat/unread-count',
+  ROOM_DETAILS: (roomId) => `/api/chat/rooms/${roomId}`,
+  DELETE_ROOM: (roomId) => `/api/chat/rooms/${roomId}`,
+};
 
-  // ============= REST API Methods =============
-
-  /**
-   * Helper method to make authenticated HTTP requests
-   */
-  async makeRequest(endpoint, options = {}) {
-    const token = getAccessToken();
-
-    const defaultOptions = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-      },
-      ...options,
-    };
-
+export const chatService = {
+  getChatRooms: async () => {
     try {
-      const response = await fetch(`${this.baseURL}${endpoint}`, defaultOptions);
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      return data;
-    } catch (error) {
-      console.error(`❌ API Error [${endpoint}]:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get all chat rooms for current user
-   */
-  async getRooms() {
-    try {
-      console.log('🔄 ChatService: Fetching chat rooms...');
-      const data = await this.makeRequest('/api/chat/rooms');
-      console.log('✅ ChatService: Rooms fetched:', data?.data?.length || 0);
-      return data;
-    } catch (error) {
-      console.error('❌ ChatService: Failed to fetch rooms:', error);
-      return {
-        success: false,
-        message: error.message || 'Failed to fetch chat rooms',
-        data: []
+      const response = await axiosClient.get(CHAT_API.GET_ROOMS);
+      return response.data;
+    } catch (err) {
+      const { message } = err?.response?.data || {};
+      throw {
+        response: {
+          data: {
+            message: message || 'Failed to fetch chat rooms'
+          }
+        },
+        message: message || 'Failed to fetch chat rooms',
+        statusCode: err?.response?.status || 500,
       };
     }
-  }
+  },
 
-  /**
-   * Create or get existing chat room with another user
-   */
-  async createOrGetRoom(otherUserId) {
+  createOrGetChatRoom: async (otherUserId) => {
     try {
-      console.log('🔄 ChatService: Creating/getting room with user:', otherUserId);
-      const data = await this.makeRequest('/api/chat/rooms', {
-        method: 'POST',
-        body: JSON.stringify({ otherUserId }),
+      const response = await axiosClient.post(CHAT_API.CREATE_ROOM, {
+        otherUserId
       });
-      console.log('✅ ChatService: Room created/retrieved successfully');
-      return data;
-    } catch (error) {
-      console.error('❌ ChatService: Failed to create/get room:', error);
-      return {
-        success: false,
-        message: error.message || 'Failed to create/get chat room',
-        data: null
+      return response.data;
+    } catch (err) {
+      const { message } = err?.response?.data || {};
+      throw {
+        response: {
+          data: {
+            message: message || 'Failed to create/get chat room'
+          }
+        },
+        message: message || 'Failed to create/get chat room',
+        statusCode: err?.response?.status || 500,
       };
     }
-  }
+  },
 
-  /**
-   * Get messages for a specific chat room
-   */
-  async getMessages(chatRoomId, query = {}) {
+  getMessages: async (chatRoomId, query = {}) => {
     try {
-      console.log('🔄 ChatService: Fetching messages for room:', chatRoomId);
-
       const params = new URLSearchParams();
       if (query.limit) params.append('limit', query.limit.toString());
       if (query.offset) params.append('offset', query.offset.toString());
 
-      const endpoint = `/api/chat/rooms/${chatRoomId}/messages${params.toString() ? `?${params}` : ''}`;
-      const data = await this.makeRequest(endpoint);
-
-      console.log('✅ ChatService: Messages fetched:', {
-        success: data.success,
-        count: data.data?.length || 0,
-        roomId: chatRoomId
-      });
-
-      return data;
-    } catch (error) {
-      console.error('❌ ChatService: Failed to fetch messages:', error);
-      return {
-        success: false,
-        message: error.message || 'Failed to fetch messages',
-        data: []
+      const url = `${CHAT_API.GET_MESSAGES(chatRoomId)}${params.toString() ? `?${params}` : ''}`;
+      const response = await axiosClient.get(url);
+      return response.data;
+    } catch (err) {
+      const { message } = err?.response?.data || {};
+      throw {
+        response: {
+          data: {
+            message: message || 'Failed to fetch messages'
+          }
+        },
+        message: message || 'Failed to fetch messages',
+        statusCode: err?.response?.status || 500,
       };
     }
-  }
+  },
 
-  /**
-   * Send message via REST API
-   */
-  async sendMessage(chatRoomId, messageData) {
+  sendMessage: async (chatRoomId, messageData) => {
     try {
-      console.log('🔄 ChatService: Sending message to room:', chatRoomId, messageData);
-
-      const data = await this.makeRequest(`/api/chat/rooms/${chatRoomId}/messages`, {
-        method: 'POST',
-        body: JSON.stringify({
-          content: messageData.content,
-          type: messageData.type || 'TEXT',
-          fileUrl: messageData.fileUrl || null
-        }),
+      const response = await axiosClient.post(CHAT_API.SEND_MESSAGE(chatRoomId), {
+        content: messageData.content,
+        type: messageData.type || 'TEXT',
+        fileUrl: messageData.fileUrl || null
       });
-
-      console.log('✅ ChatService: Message sent successfully');
-      return data;
-    } catch (error) {
-      console.error('❌ ChatService: Failed to send message:', error);
-      return {
-        success: false,
-        message: error.message || 'Failed to send message',
-        data: null
+      return response.data;
+    } catch (err) {
+      const { message } = err?.response?.data || {};
+      throw {
+        response: {
+          data: {
+            message: message || 'Failed to send message'
+          }
+        },
+        message: message || 'Failed to send message',
+        statusCode: err?.response?.status || 500,
       };
     }
-  }
+  },
 
-  /**
-   * Mark messages as read
-   */
-  async markMessagesAsRead(chatRoomId) {
+  markMessagesAsRead: async (chatRoomId) => {
     try {
-      console.log('🔄 ChatService: Marking messages as read for room:', chatRoomId);
-
-      const data = await this.makeRequest(`/api/chat/rooms/${chatRoomId}/mark-read`, {
-        method: 'POST',
-      });
-
-      console.log('✅ ChatService: Messages marked as read');
-      return data;
-    } catch (error) {
-      console.error('❌ ChatService: Failed to mark messages as read:', error);
-      return {
-        success: false,
-        message: error.message || 'Failed to mark messages as read',
-        data: null
+      const response = await axiosClient.post(CHAT_API.MARK_READ(chatRoomId));
+      return response.data;
+    } catch (err) {
+      const { message } = err?.response?.data || {};
+      throw {
+        response: {
+          data: {
+            message: message || 'Failed to mark messages as read'
+          }
+        },
+        message: message || 'Failed to mark messages as read',
+        statusCode: err?.response?.status || 500,
       };
     }
-  }
+  },
 
-  /**
-   * Get unread messages count
-   */
-  async getUnreadCount() {
+  getUnreadCount: async () => {
     try {
-      console.log('🔄 ChatService: Fetching unread count...');
-
-      const data = await this.makeRequest('/api/chat/unread-count');
-
-      console.log('✅ ChatService: Unread count fetched:', data?.data?.unreadCount || 0);
-      return data;
-    } catch (error) {
-      console.error('❌ ChatService: Failed to fetch unread count:', error);
-      return {
-        success: false,
-        message: error.message || 'Failed to get unread count',
-        data: { unreadCount: 0 }
+      const response = await axiosClient.get(CHAT_API.UNREAD_COUNT);
+      return response.data;
+    } catch (err) {
+      const { message } = err?.response?.data || {};
+      throw {
+        response: {
+          data: {
+            message: message || 'Failed to get unread count'
+          }
+        },
+        message: message || 'Failed to get unread count',
+        statusCode: err?.response?.status || 500,
       };
     }
-  }
+  },
 
-  /**
-   * Get chat room details
-   */
-  async getChatRoomDetails(chatRoomId) {
+  getChatRoomDetails: async (chatRoomId) => {
     try {
-      console.log('🔄 ChatService: Fetching room details:', chatRoomId);
-
-      const data = await this.makeRequest(`/api/chat/rooms/${chatRoomId}`);
-
-      console.log('✅ ChatService: Room details fetched');
-      return data;
-    } catch (error) {
-      console.error('❌ ChatService: Failed to fetch room details:', error);
-      return {
-        success: false,
-        message: error.message || 'Failed to fetch room details',
-        data: null
+      const response = await axiosClient.get(CHAT_API.ROOM_DETAILS(chatRoomId));
+      return response.data;
+    } catch (err) {
+      const { message } = err?.response?.data || {};
+      throw {
+        response: {
+          data: {
+            message: message || 'Failed to fetch room details'
+          }
+        },
+        message: message || 'Failed to fetch room details',
+        statusCode: err?.response?.status || 500,
       };
     }
-  }
+  },
 
-  // ============= WebSocket Methods =============
+  // deleteChatRoom: async (chatRoomId) => {
+  //   try {
+  //     const response = await axiosClient.delete(CHAT_API.DELETE_ROOM(chatRoomId));
+  //     return response.data;
+  //   } catch (err) {
+  //     const { message } = err?.response?.data || {};
+  //     throw {
+  //       response: {
+  //         data: {
+  //           message: message || 'Failed to delete chat room'
+  //         }
+  //       },
+  //       message: message || 'Failed to delete chat room',
+  //       statusCode: err?.response?.status || 500,
+  //     };
+  //   }
+  // }
+};
 
-  /**
-   * Connect to WebSocket server
-   */
-  connect() {
-    const token = getAccessToken();
-    if (!token) {
-      console.error('❌ ChatService: No access token found');
-      this.emit('error', { message: 'No authentication token' });
-      return null;
-    }
-
-    console.log('🔄 ChatService: Connecting to WebSocket...');
-    console.log('🔑 ChatService: Token present:', !!token);
-    console.log('🌐 ChatService: Backend URL:', this.baseURL);
-
-    // Disconnect existing connection
-    if (this.socket && this.socket.connected) {
-      console.log('🔄 ChatService: Disconnecting existing connection...');
-      this.socket.disconnect();
-    }
-
-    this.socket = io(`${this.baseURL}/chat`, {
-      auth: {
-        token: token
-      },
-      transports: ['websocket'],
-      forceNew: true,
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
-      timeout: 20000,
-      autoConnect: true,
-    });
-
-    this.setupEventHandlers();
-    return this.socket;
-  }
-
-  /**
-   * Setup WebSocket event handlers
-   */
-  setupEventHandlers() {
-    if (!this.socket) return;
-
-    // Remove existing listeners first
-    this.socket.removeAllListeners();
-
-    // Connection events
-    this.socket.on('connect', () => {
-      this.isConnected = true;
-      this.emit('connected');
-    });
-
-    this.socket.on('connection_success', (data) => {
-      this.emit('connection_success', data);
-    });
-
-    this.socket.on('disconnect', (reason) => {
-      this.isConnected = false;
-      this.emit('disconnected', reason);
-    });
-
-    this.socket.on('connect_error', (error) => {
-      this.emit('error', error);
-    });
-
-    this.socket.on('error', (error) => {
-      this.emit('error', error);
-    });
-
-    // ✅ Enhanced chat events
-    this.socket.on('chat_room_joined', (data) => {
-      this.emit('room_joined', data);
-    });
-
-    this.socket.on('room_message', (message) => {
-      this.emit('room_message', message);
-    });
-
-    this.socket.on('private_message', (message) => {
-      this.emit('private_message', message);
-    });
-
-    this.socket.on('new_message', (message) => {
-      this.emit('new_message', message);
-    });
-
-    this.socket.on('message_sent', (data) => {
-      this.emit('message_sent', data);
-    });
-
-    this.socket.on('messages_read', (data) => {
-      this.emit('messages_read', data);
-    });
-
-    this.socket.on('user_joined', (data) => {
-      this.emit('user_joined', data);
-    });
-
-    this.socket.on('user_typing', (data) => {
-      this.emit('user_typing', data);
-    });
-
-    this.socket.on('user_stopped_typing', (data) => {
-      this.emit('user_stopped_typing', data);
-    });
-
-    this.socket.on('message_notification', (data) => {
-      this.emit('message_notification', data);
-    });
-  }
-
-  /**
-   * Disconnect from WebSocket server
-   */
-  disconnect() {
-    if (this.socket && this.socket.connected) {
-      console.log('🔌 ChatService: Disconnecting WebSocket...');
-      this.socket.disconnect();
-    }
-    this.isConnected = false;
-  }
-
-  /**
-   * Join a chat room via WebSocket
-   */
-  joinRoom(chatRoomIdOrUserId, isUserId = false, query = { limit: 50, offset: 0 }) {
-    if (!this.socket || !this.isConnected) {
-      return;
-    }
-
-    if (isUserId) {
-      // Join by otherUserId (create/get room)
-      this.socket.emit('join_chat_room', {
-        otherUserId: chatRoomIdOrUserId,
-        query
-      });
-    } else {
-      // Join by chatRoomId (existing room)
-      this.socket.emit('join_chat_room', {
-        chatRoomId: chatRoomIdOrUserId,
-        query
-      });
-    }
-  }
-
-  joinRoomById(chatRoomId, query = { limit: 50, offset: 0 }) {
-    this.joinRoom(chatRoomId, false, query);
-  }
-
-  joinRoomByUserId(otherUserId, query = { limit: 50, offset: 0 }) {
-    this.joinRoom(otherUserId, true, query);
-  }
-
-  /**
-   * Send message via WebSocket
-   */
-  sendMessageWS(chatRoomId, content, type = 'TEXT') {
-    if (!this.socket || !this.isConnected) {
-      return;
-    }
-
-    // ✅ Use correct event name that matches backend
-    this.socket.emit('send_message', {
-      chatRoomId,
-      content,
-      type
-    });
-  }
-
-  /**
-   * Mark messages as read via WebSocket
-   */
-  markAsReadWS(chatRoomId) {
-    if (!this.socket || !this.isConnected) {
-      console.warn('⚠️ ChatService: Cannot mark as read - WebSocket not connected');
-      return;
-    }
-
-    console.log('👁️ ChatService: Marking as read via WebSocket:', chatRoomId);
-    this.socket.emit('mark_read', { chatRoomId });
-  }
-
-  /**
-   * Get more messages via WebSocket
-   */
-  getMoreMessages(chatRoomId, query) {
-    if (!this.socket || !this.isConnected) {
-      console.warn('⚠️ ChatService: Cannot get more messages - WebSocket not connected');
-      return;
-    }
-
-    console.log('📨 ChatService: Getting more messages via WebSocket:', { chatRoomId, query });
-    this.socket.emit('get_more_messages', { chatRoomId, query });
-  }
-
-  /**
-   * Send typing indicator
-   */
-  sendTyping(chatRoomId) {
-    if (!this.socket || !this.isConnected) {
-      return;
-    }
-
-    this.socket.emit('typing_start', { chatRoomId });
-  }
-
-  /**
-   * Stop typing indicator
-   */
-  stopTyping(chatRoomId) {
-    if (!this.socket || !this.isConnected) {
-      return;
-    }
-
-    this.socket.emit('typing_stop', { chatRoomId });
-  }
-
-  // ============= Event Handling =============
-
-  /**
-   * Subscribe to events
-   */
-  on(event, callback) {
-    if (!this.eventCallbacks.has(event)) {
-      this.eventCallbacks.set(event, []);
-    }
-    this.eventCallbacks.get(event).push(callback);
-  }
-
-  /**
-   * Unsubscribe from events
-   */
-  off(event, callback) {
-    if (this.eventCallbacks.has(event)) {
-      const callbacks = this.eventCallbacks.get(event);
-      const index = callbacks.indexOf(callback);
-      if (index > -1) {
-        callbacks.splice(index, 1);
-      }
-    }
-  }
-
-  /**
-   * Emit custom events to subscribers
-   */
-  emit(event, data) {
-    if (this.eventCallbacks.has(event)) {
-      this.eventCallbacks.get(event).forEach(callback => {
-        try {
-          callback(data);
-        } catch (error) {
-          console.error(`❌ ChatService: Error in event callback for ${event}:`, error);
-        }
-      });
-    }
-  }
-
-  /**
-   * Get connection status
-   */
-  getConnectionStatus() {
-    return {
-      isConnected: this.isConnected,
-      socketId: this.socket?.id || null,
-      socketConnected: this.socket?.connected || false,
-    };
-  }
-
-  /**
-   * Debug helper
-   */
-  debug() {
-    return {
-      isConnected: this.isConnected,
-      socket: this.socket ? {
-        id: this.socket.id,
-        connected: this.socket.connected,
-        url: this.socket.io.uri,
-      } : null,
-      eventCallbacks: Array.from(this.eventCallbacks.keys()),
-      baseURL: this.baseURL,
-    };
-  }
-}
-
-// Export singleton instance
-export const chatService = new ChatService();
-export default chatService;
-
-// Also export individual methods for direct use in chatApiService.js
 export const chatApiService = {
-  getChatRooms: () => chatService.getRooms(),
-  getMessages: (chatRoomId, query) => chatService.getMessages(chatRoomId, query),
-  sendMessage: (chatRoomId, messageData) => chatService.sendMessage(chatRoomId, messageData),
-  createOrGetChatRoom: (data) => chatService.createOrGetRoom(data.otherUserId),
-  markMessagesAsRead: (chatRoomId) => chatService.markMessagesAsRead(chatRoomId),
-  getUnreadCount: () => chatService.getUnreadCount(),
-  getChatRoomDetails: (chatRoomId) => chatService.getChatRoomDetails(chatRoomId),
+  getChatRooms: async () => {
+    try {
+      const result = await chatService.getChatRooms();
+      return { success: true, data: result.data || result };
+    } catch (error) {
+      return { success: false, message: error.message, data: null };
+    }
+  },
+
+  getMessages: async (chatRoomId, query) => {
+    try {
+      const result = await chatService.getMessages(chatRoomId, query);
+      return { success: true, data: result.data || result };
+    } catch (error) {
+      return { success: false, message: error.message, data: null };
+    }
+  },
+
+  sendMessage: async (chatRoomId, messageData) => {
+    try {
+      const result = await chatService.sendMessage(chatRoomId, messageData);
+      return { success: true, data: result.data || result };
+    } catch (error) {
+      return { success: false, message: error.message, data: null };
+    }
+  },
+
+  createOrGetChatRoom: async (data) => {
+    try {
+      const otherUserId = data.otherUserId || data;
+      const result = await chatService.createOrGetChatRoom(otherUserId);
+      return { success: true, data: result.data || result };
+    } catch (error) {
+      return { success: false, message: error.message, data: null };
+    }
+  },
+
+  markMessagesAsRead: async (chatRoomId) => {
+    try {
+      const result = await chatService.markMessagesAsRead(chatRoomId);
+      return { success: true, data: result.data || result };
+    } catch (error) {
+      return { success: false, message: error.message, data: null };
+    }
+  },
+
+  getUnreadCount: async () => {
+    try {
+      const result = await chatService.getUnreadCount();
+      return { success: true, data: result.data || result };
+    } catch (error) {
+      return { success: false, message: error.message, data: null };
+    }
+  },
+
+  getChatRoomDetails: async (chatRoomId) => {
+    try {
+      const result = await chatService.getChatRoomDetails(chatRoomId);
+      return { success: true, data: result.data || result };
+    } catch (error) {
+      return { success: false, message: error.message, data: null };
+    }
+  },
+
+  // deleteChatRoom: async (chatRoomId) => {
+  //   try {
+  //     const result = await chatService.deleteChatRoom(chatRoomId);
+  //     return { success: true, data: result.data || result, message: result.message || 'Chat room deleted successfully' };
+  //   } catch (error) {
+  //     return { success: false, message: error.message, data: null };
+  //   }
+  // }
 };

@@ -35,9 +35,12 @@ import {
   ERROR_FAILED_TO_GET_MESSAGES_WITH_QUERY,
   ERROR_FAILED_TO_GET_UNREAD_MESSAGES_COUNT,
   ERROR_FAILED_TO_GET_USER_INFO,
+  ERROR_FAILED_TO_DELETE_CHAT_ROOM,
+  SUCCESS_CHAT_ROOM_DELETED,
 } from './chat-constants';
 import { ERROR_USER_NOT_FOUND } from '../common/constants/error.constant';
 import TokenService from '../common/services/token.service';
+import e from 'express';
 
 @Injectable()
 export class ChatService {
@@ -56,9 +59,29 @@ export class ChatService {
     try {
       const chatRooms = await this.prisma.chatRoom.findMany({
         where: {
-          OR: [
-            { user1Id: userId },
-            { user2Id: userId },
+          AND: [
+            {
+              OR: [
+                { user1Id: userId },
+                { user2Id: userId },
+              ],
+            },
+            {
+              OR: [
+                {
+                  AND: [
+                    { user1Id: userId },
+                    { deletedByUser1: false },
+                  ],
+                },
+                {
+                  AND: [
+                    { user2Id: userId },
+                    { deletedByUser2: false },
+                  ],
+                },
+              ],
+            },
           ],
         },
         include: {
@@ -108,7 +131,7 @@ export class ChatService {
         orderBy: { updatedAt: 'desc' },
       });
 
-      if (!chatRooms) {
+      if (!chatRooms || chatRooms.length === 0) {
         return {
           success: true,
           data: [],
@@ -128,15 +151,24 @@ export class ChatService {
 
           const otherUser = room.user1Id === userId ? room.user2 : room.user1;
 
+          const lastMessage = await this.getLastMessageForUser(room.chatRoomId, userId);
+
+
           return {
             chatRoomId: room.chatRoomId,
             createdAt: room.createdAt,
             updatedAt: room.updatedAt,
             otherUser,
-            lastMessage: room.messages[0] || null,
+            lastMessage,
             unreadCount,
             isOneOnOne: true,
             participantCount: 2,
+            deletionStatus: {
+              deletedByUser1: room.deletedByUser1,
+              deletedByUser2: room.deletedByUser2,
+              user1DeletedAt: room.user1DeletedAt,
+              user2DeletedAt: room.user2DeletedAt,
+            },
           };
         })
       );
@@ -207,7 +239,7 @@ export class ChatService {
         });
       }
 
-      const messages = await this.getMessagesWithQuery(query, chatRoomId);
+      const messages = await this.getMessagesWithQuery(query, chatRoomId, currentUserId);
 
       return {
         success: true,
@@ -260,6 +292,29 @@ export class ChatService {
           success: false,
           message: ERROR_NOT_ROOM_MEMBER.message,
         });
+      }
+
+      const chatRoom = await this.prisma.chatRoom.findUnique({
+        where: { chatRoomId },
+      });
+
+      if (chatRoom) {
+        const isUser1 = chatRoom.user1Id === currentUserId;
+        const isUser2 = chatRoom.user2Id === currentUserId;
+
+        if ((isUser1 && chatRoom.deletedByUser1) || (isUser2 && chatRoom.deletedByUser2)) {
+          const reactivateData: any = {};
+          if (isUser1) {
+            reactivateData.deletedByUser1 = false;
+          } else if (isUser2) {
+            reactivateData.deletedByUser2 = false;
+          }
+
+          await this.prisma.chatRoom.update({
+            where: { chatRoomId },
+            data: reactivateData,
+          });
+        }
       }
 
       if (createMessageDto.content && createMessageDto.content.length > CHAT_VALIDATION.MESSAGE.MAX_LENGTH) {
@@ -375,6 +430,89 @@ export class ChatService {
     }
   }
 
+  async handleDeleteChatRoom(chatRoomId: string, currentUserId: string) {
+    try {
+      const chatRoom = await this.prisma.chatRoom.findUnique({
+        where: { chatRoomId },
+      });
+
+      if (!chatRoom) {
+        throw new NotFoundException(ERROR_CHAT_ROOM_NOT_FOUND.message);
+      }
+
+      const hasAccess = await this.validateUserRoomAccess(chatRoomId, currentUserId);
+      if (!hasAccess) {
+        throw new ForbiddenException(ERROR_NOT_ROOM_MEMBER.message);
+      }
+
+      const isUser1 = chatRoom.user1Id === currentUserId;
+      const isUser2 = chatRoom.user2Id === currentUserId;
+
+      if ((isUser1 && chatRoom.deletedByUser1) || (isUser2 && chatRoom.deletedByUser2)) {
+        throw new BadRequestException({
+          success: false,
+          message: 'You have already deleted this chat room',
+        });
+      }
+
+      const updateData: any = {};
+      if (isUser1) {
+        updateData.deletedByUser1 = true;
+        updateData.user1DeletedAt = new Date();
+      } else if (isUser2) {
+        updateData.deletedByUser2 = true;
+        updateData.user2DeletedAt = new Date();
+      }
+
+      const updatedChatRoom = await this.prisma.chatRoom.update({
+        where: { chatRoomId },
+        data: updateData,
+      });
+
+      const bothDeleted = updatedChatRoom.deletedByUser1 && updatedChatRoom.deletedByUser2;
+
+      if (bothDeleted) {
+        await this.prisma.message.deleteMany({
+          where: { chatRoomId },
+        });
+
+        await this.prisma.chatRoom.delete({
+          where: { chatRoomId },
+        });
+
+        return {
+          success: true,
+          data: {
+            chatRoomId,
+            deletedAt: new Date().toISOString(),
+            deletionType: 'hard_delete',
+            reason: 'Both users deleted the chat room',
+          },
+          message: 'Chat room permanently deleted',
+        };
+      } else {
+        return {
+          success: true,
+          data: {
+            chatRoomId,
+            deletedAt: new Date().toISOString(),
+            deletionType: 'soft_delete',
+            deletedBy: currentUserId,
+            hiddenForUser: currentUserId,
+          },
+          message: SUCCESS_CHAT_ROOM_DELETED.message,
+        };
+      }
+    } catch (error) {
+      if (error instanceof NotFoundException ||
+        error instanceof ForbiddenException ||
+        error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new Error(ERROR_FAILED_TO_DELETE_CHAT_ROOM.message);
+    }
+  }
+
   private async broadcastToRoom(
     message: any,
     chatRoomId: string,
@@ -415,7 +553,6 @@ export class ChatService {
         });
       }
     } catch (error) {
-      // Error handling without console log
     }
   }
 
@@ -439,6 +576,25 @@ export class ChatService {
             user2Id: secondUserId,
           },
         });
+      } else {
+        const isUser1 = chatRoom.user1Id === user1Id;
+        const isUser2 = chatRoom.user2Id === user1Id;
+
+        if ((isUser1 && chatRoom.deletedByUser1) || (isUser2 && chatRoom.deletedByUser2)) {
+          const reactivateData: any = {};
+          if (isUser1) {
+            reactivateData.deletedByUser1 = false;
+            reactivateData.user1DeletedAt = new Date();
+          } else if (isUser2) {
+            reactivateData.deletedByUser2 = false;
+            reactivateData.user2DeletedAt = new Date();
+          }
+
+          chatRoom = await this.prisma.chatRoom.update({
+            where: { chatRoomId: chatRoom.chatRoomId },
+            data: reactivateData,
+          });
+        }
       }
 
       return chatRoom;
@@ -447,12 +603,33 @@ export class ChatService {
     }
   }
 
-  private async getMessagesWithQuery(query: ListMessageQueryDto, chatRoomId: string) {
+  private async getMessagesWithQuery(query: ListMessageQueryDto, chatRoomId: string, currentUserId?: string) {
     try {
-      const { limit = 50, offset = 0 } = query;
+      const limit = query.limit || LIMIT_DEFAULT;
+      const offset = query.offset || OFFSET_DEFAULT;
+
+      let whereClause: any = { chatRoomId };
+
+      if (currentUserId) {
+        const chatRoom = await this.prisma.chatRoom.findUnique({
+          where: { chatRoomId },
+        });
+
+        if (chatRoom) {
+          const isUser1 = chatRoom.user1Id === currentUserId;
+          const isUser2 = chatRoom.user2Id === currentUserId;
+
+          // Tìm theo thời gian xóa của người dùng
+          if (isUser1 && chatRoom.user1DeletedAt) {
+            whereClause.timestamp = { gt: chatRoom.user1DeletedAt };
+          } else if (isUser2 && chatRoom.user2DeletedAt) {
+            whereClause.timestamp = { gt: chatRoom.user2DeletedAt };
+          }
+        }
+      }
 
       const messages = await this.prisma.message.findMany({
-        where: { chatRoomId },
+        where: whereClause,
         orderBy: { timestamp: 'desc' },
         take: limit,
         skip: offset,
@@ -581,24 +758,6 @@ export class ChatService {
               },
             },
           },
-          messages: {
-            orderBy: { timestamp: 'desc' },
-            take: 20,
-            include: {
-              sender: {
-                select: {
-                  userId: true,
-                  email: true,
-                  profile: {
-                    select: {
-                      fullName: true,
-                      profileImageUrl: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
         },
       });
 
@@ -606,20 +765,16 @@ export class ChatService {
         throw new NotFoundException(ERROR_CHAT_ROOM_NOT_FOUND.message);
       }
 
-      const unreadCount = await this.prisma.message.count({
-        where: {
-          chatRoomId,
-          senderId: { not: currentUserId },
-          status: { not: MessageStatus.READ },
-        },
-      });
+      const messages = await this.getFilteredMessagesForUser(chatRoomId, currentUserId, LIMIT_DEFAULT);
+
+      const unreadCount = await this.getUnreadCountForUser(chatRoomId, currentUserId);
 
       return {
         chatRoomId: chatRoom.chatRoomId,
         createdAt: chatRoom.createdAt,
         updatedAt: chatRoom.updatedAt,
         otherUser: chatRoom.user1Id === currentUserId ? chatRoom.user2 : chatRoom.user1,
-        recentMessages: chatRoom.messages.reverse(),
+        recentMessages: messages,
         unreadCount,
       };
     } catch (error) {
@@ -627,6 +782,51 @@ export class ChatService {
         throw error;
       }
       throw new Error(ERROR_FAILED_TO_GET_CHAT_ROOM_DETAILS.message);
+    }
+  }
+
+  private async getFilteredMessagesForUser(chatRoomId: string, userId: string, limit: number = LIMIT_DEFAULT) {
+    try {
+      const chatRoom = await this.prisma.chatRoom.findUnique({
+        where: { chatRoomId },
+      });
+
+      if (!chatRoom) return [];
+
+      const isUser1 = chatRoom.user1Id === userId;
+      const isUser2 = chatRoom.user2Id === userId;
+
+      let whereClause: any = { chatRoomId };
+
+      if (isUser1 && chatRoom.user1DeletedAt) {
+        whereClause.timestamp = { gt: chatRoom.user1DeletedAt };
+      } else if (isUser2 && chatRoom.user2DeletedAt) {
+        whereClause.timestamp = { gt: chatRoom.user2DeletedAt };
+      }
+
+      const messages = await this.prisma.message.findMany({
+        where: whereClause,
+        orderBy: { timestamp: 'desc' },
+        take: limit,
+        include: {
+          sender: {
+            select: {
+              userId: true,
+              email: true,
+              profile: {
+                select: {
+                  fullName: true,
+                  profileImageUrl: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      return messages.reverse();
+    } catch (error) {
+      return [];
     }
   }
 
@@ -716,23 +916,23 @@ export class ChatService {
   ): Promise<void> {
     if (!this.chatGateway) return;
 
-      const roomId = `room_${chatRoomId}`;
+    const roomId = `room_${chatRoomId}`;
 
-      const socketsInRoom = await this.chatGateway.server.in(roomId).fetchSockets();
+    const socketsInRoom = await this.chatGateway.server.in(roomId).fetchSockets();
 
-      const receiverSockets = socketsInRoom.filter((socket: Socket) =>
-        socket.data?.user?.id !== senderId
-      );
+    const receiverSockets = socketsInRoom.filter((socket: Socket) =>
+      socket.data?.user?.id !== senderId
+    );
 
-      receiverSockets.forEach((socket: Socket) => {
-        socket.emit(WS_EVENTS.NEW_MESSAGE, {
-          ...message,
-          broadcastType: 'new_message',
-          timestamp: new Date().toISOString()
-        });
+    receiverSockets.forEach((socket: Socket) => {
+      socket.emit(WS_EVENTS.NEW_MESSAGE, {
+        ...message,
+        broadcastType: 'new_message',
+        timestamp: new Date().toISOString()
       });
+    });
 
-      await this.sendNotificationToOtherUser(chatRoomId, senderId, message);
+    await this.sendNotificationToOtherUser(chatRoomId, senderId, message);
   }
 
   private async sendNotificationToOtherUser(
@@ -755,7 +955,6 @@ export class ChatService {
         });
       }
     } catch (error) {
-      // Error handling without console log
     }
   }
 
@@ -765,15 +964,15 @@ export class ChatService {
   ): Promise<void> {
     if (!this.chatGateway) return;
 
-      const roomId = `room_${chatRoomId}`;
+    const roomId = `room_${chatRoomId}`;
 
-      this.chatGateway.server.to(roomId).emit(WS_EVENTS.MESSAGES_READ, {
-        chatRoomId,
-        readBy: userId,
-        success: true,
-        message: SUCCESS_MESSAGES_MARKED_READ.message,
-        timestamp: new Date().toISOString()
-      });
+    this.chatGateway.server.to(roomId).emit(WS_EVENTS.MESSAGES_READ, {
+      chatRoomId,
+      readBy: userId,
+      success: true,
+      message: SUCCESS_MESSAGES_MARKED_READ.message,
+      timestamp: new Date().toISOString()
+    });
   }
 
   private async getUserInfo(userId: string): Promise<{
@@ -858,6 +1057,83 @@ export class ChatService {
       return chatRoom.user1Id === currentUserId ? chatRoom.user2 : chatRoom.user1;
     } catch (error) {
       return null;
+    }
+  }
+
+  private async getLastMessageForUser(chatRoomId: string, userId: string) {
+    try {
+      const chatRoom = await this.prisma.chatRoom.findUnique({
+        where: { chatRoomId },
+      });
+
+      if (!chatRoom) return null;
+
+      const isUser1 = chatRoom.user1Id === userId;
+      const isUser2 = chatRoom.user2Id === userId;
+
+      let whereClause: any = { chatRoomId };
+
+      if (isUser1 && chatRoom.user1DeletedAt) {
+        whereClause.timestamp = { gt: chatRoom.user1DeletedAt };
+      } else if (isUser2 && chatRoom.user2DeletedAt) {
+        whereClause.timestamp = { gt: chatRoom.user2DeletedAt };
+      }
+
+      const message = await this.prisma.message.findFirst({
+        where: whereClause,
+        orderBy: { timestamp: 'desc' },
+        include: {
+          sender: {
+            select: {
+              userId: true,
+              email: true,
+              profile: {
+                select: {
+                  fullName: true,
+                  profileImageUrl: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      return message;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  private async getUnreadCountForUser(chatRoomId: string, userId: string): Promise<number> {
+    try {
+      const chatRoom = await this.prisma.chatRoom.findUnique({
+        where: { chatRoomId },
+      });
+
+      if (!chatRoom) return 0;
+
+      const isUser1 = chatRoom.user1Id === userId;
+      const isUser2 = chatRoom.user2Id === userId;
+
+      let timestampFilter = {};
+      if (isUser1 && chatRoom.user1DeletedAt) {
+        timestampFilter = { timestamp: { gt: chatRoom.user1DeletedAt } };
+      } else if (isUser2 && chatRoom.user2DeletedAt) {
+        timestampFilter = { timestamp: { gt: chatRoom.user2DeletedAt } };
+      }
+
+      const count = await this.prisma.message.count({
+        where: {
+          chatRoomId,
+          senderId: { not: userId },
+          status: { not: MessageStatus.READ },
+          ...timestampFilter,
+        },
+      });
+
+      return count;
+    } catch (error) {
+      return 0;
     }
   }
 }

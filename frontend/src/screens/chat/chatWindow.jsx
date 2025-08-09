@@ -1,4 +1,3 @@
-// screens/chat/chatWindow.jsx
 import React, { useEffect, useRef } from 'react';
 import { useChat } from '@/hooks/useChat.js';
 import ChatRoomList from './chatRoomList.jsx';
@@ -16,7 +15,6 @@ const ChatWindow = () => {
     typing,
     sendMessage,
     selectRoom,
-    handleTyping,
     createChatRoom,
   } = useChat();
 
@@ -170,7 +168,6 @@ const ChatWindow = () => {
                 {/* Message Input */}
                 <MessageInput
                   onSendMessage={sendMessage}
-                  onTyping={() => handleTyping(currentRoom.chatRoomId)}
                   disabled={!connected}
                 />
               </>
