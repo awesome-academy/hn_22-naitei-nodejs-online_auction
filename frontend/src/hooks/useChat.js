@@ -167,6 +167,45 @@ export const useChat = () => {
     }
   }, [fetchRooms, selectRoom, showToastNotification]);
 
+  const deleteChatRoom = useCallback(async (chatRoomId) => {
+    try {
+      setLoading(true);
+      const response = await chatApiService.deleteChatRoom(chatRoomId);
+
+      if (response.success) {
+        // ✅ Remove room từ state
+        setRooms(prev => prev.filter(room => room.chatRoomId !== chatRoomId));
+
+        // ✅ Clear current room nếu đang xem room bị xóa
+        if (currentRoom?.chatRoomId === chatRoomId) {
+          setCurrentRoom(null);
+          setMessages([]);
+        }
+
+        // ✅ Update unread count
+        await fetchUnreadCount();
+
+        // ✅ Show success notification
+        showToastNotification(
+          response.message || 'Chat room deleted successfully',
+          'success'
+        );
+
+        return true;
+      } else {
+        throw new Error(response.message);
+      }
+    } catch (error) {
+      showToastNotification(
+        error.message || 'Failed to delete chat room',
+        'error'
+      );
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [currentRoom, fetchUnreadCount, showToastNotification]);
+
   useEffect(() => {
     if (!user?.id) return;
 
@@ -295,6 +334,7 @@ export const useChat = () => {
     selectRoom,
     sendMessage,
     createChatRoom,
+    deleteChatRoom,
     fetchRooms,
     loadMessages,
     markMessagesAsRead,

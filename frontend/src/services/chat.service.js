@@ -149,23 +149,23 @@ export const chatService = {
     }
   },
 
-  // deleteChatRoom: async (chatRoomId) => {
-  //   try {
-  //     const response = await axiosClient.delete(CHAT_API.DELETE_ROOM(chatRoomId));
-  //     return response.data;
-  //   } catch (err) {
-  //     const { message } = err?.response?.data || {};
-  //     throw {
-  //       response: {
-  //         data: {
-  //           message: message || 'Failed to delete chat room'
-  //         }
-  //       },
-  //       message: message || 'Failed to delete chat room',
-  //       statusCode: err?.response?.status || 500,
-  //     };
-  //   }
-  // }
+  deleteChatRoom: async (chatRoomId) => {
+    try {
+      const response = await axiosClient.delete(CHAT_API.DELETE_ROOM(chatRoomId));
+      return response.data;
+    } catch (err) {
+      const { message } = err?.response?.data || {};
+      throw {
+        response: {
+          data: {
+            message: message || 'Failed to delete chat room'
+          }
+        },
+        message: message || 'Failed to delete chat room',
+        statusCode: err?.response?.status || 500,
+      };
+    }
+  }
 };
 
 export const chatApiService = {
@@ -233,12 +233,12 @@ export const chatApiService = {
     }
   },
 
-  // deleteChatRoom: async (chatRoomId) => {
-  //   try {
-  //     const result = await chatService.deleteChatRoom(chatRoomId);
-  //     return { success: true, data: result.data || result, message: result.message || 'Chat room deleted successfully' };
-  //   } catch (error) {
-  //     return { success: false, message: error.message, data: null };
-  //   }
-  // }
+  deleteChatRoom: async (chatRoomId) => {
+    try {
+      const result = await chatService.deleteChatRoom(chatRoomId);
+      return { success: true, data: result.data || result, message: result.message || 'Chat room deleted successfully' };
+    } catch (error) {
+      return { success: false, message: error.message, data: null };
+    }
+  }
 };
