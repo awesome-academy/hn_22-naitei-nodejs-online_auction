@@ -26,25 +26,32 @@ const ChatWindow = () => {
 
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, room: null });
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  const scrollToBottom = useCallback((behavior = 'smooth') => {
+  const scrollToBottom = useCallback((behavior = 'auto') => {
     if (isScrollingRef.current) return;
 
     isScrollingRef.current = true;
 
-    requestAnimationFrame(() => {
-      if (messagesEndRef.current) {
-        messagesEndRef.current.scrollIntoView({
-          behavior,
-          block: 'end',
-          inline: 'nearest'
-        });
+    if (behavior === 'auto' || behavior === 'instant') {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
       }
+    } else {
+      requestAnimationFrame(() => {
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({
+            behavior,
+            block: 'end',
+            inline: 'nearest'
+          });
+        }
+      });
+    }
 
-      setTimeout(() => {
-        isScrollingRef.current = false;
-      }, behavior === 'smooth' ? 300 : 50);
-    });
+    setTimeout(() => {
+      isScrollingRef.current = false;
+    }, behavior === 'smooth' ? 100 : 10);
   }, []);
 
   useEffect(() => {
@@ -52,27 +59,57 @@ const ChatWindow = () => {
     const previousMessageCount = lastMessageCountRef.current;
 
     if (currentMessageCount > previousMessageCount && currentMessageCount > 0) {
-      const container = messagesContainerRef.current;
-      if (container) {
-        const { scrollTop, scrollHeight, clientHeight } = container;
-        const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100;
-
-        if (isNearBottom || previousMessageCount === 0) {
-          scrollToBottom('smooth');
+      setTimeout(() => {
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
         }
-      } else {
-        scrollToBottom('smooth');
-      }
+      }, 0);
     }
 
     lastMessageCountRef.current = currentMessageCount;
-  }, [messages.length, scrollToBottom]);
+  }, [messages.length]);
 
   useEffect(() => {
-    if (currentRoom && messages.length > 0) {
-      setTimeout(() => scrollToBottom('instant'), 100);
+    if (currentRoom && messages.length > 0 && !loading) {
+      setTimeout(() => {
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+      }, 0);
+
+      setTimeout(() => {
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+      }, 50);
+
+      setTimeout(() => {
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+      }, 100);
+
+      setTimeout(() => {
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+      }, 200);
     }
-  }, [currentRoom?.chatRoomId, scrollToBottom]);
+  }, [currentRoom?.chatRoomId, messages.length, loading]);
+
+  useEffect(() => {
+    if (!loading && currentRoom && messages.length > 0) {
+      setTimeout(() => {
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+      }, 0);
+
+      if (isInitialLoad) {
+        setIsInitialLoad(false);
+      }
+    }
+  }, [loading, currentRoom?.chatRoomId, isInitialLoad]);
 
   const startChatwithOtherUser = async () => {
     const otherUserId = prompt('Enter other user ID to start chat:');
@@ -95,7 +132,6 @@ const ChatWindow = () => {
         setDeleteModal({ isOpen: false, room: null });
       }
     } catch (error) {
-      // Error handled in deleteChatRoom
     } finally {
       setIsDeleting(false);
     }
@@ -110,10 +146,22 @@ const ChatWindow = () => {
   const handleSendMessage = useCallback(async (content, type = 'TEXT') => {
     await sendMessage(content, type);
 
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+
     setTimeout(() => {
-      scrollToBottom('smooth');
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }
+    }, 10);
+
+    setTimeout(() => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }
     }, 50);
-  }, [sendMessage, scrollToBottom]);
+  }, [sendMessage]);
 
   return (
     <Container className="max-w-6xl mx-auto py-8">
@@ -130,7 +178,7 @@ const ChatWindow = () => {
               </div>
 
               <div className="text-sm text-gray-500">
-                Rooms: {rooms.length} | Messages: {messages.length}
+                Rooms: {rooms.length}
               </div>
 
               <button
@@ -147,9 +195,6 @@ const ChatWindow = () => {
           <div className="w-1/3 border-r border-gray-200 overflow-y-auto bg-gray-50">
             <div className="p-4 border-b border-gray-200 bg-white">
               <h2 className="font-medium text-gray-900">Conversations</h2>
-              {loading && (
-                <p className="text-sm text-gray-500 mt-1">Loading...</p>
-              )}
             </div>
 
             <ChatRoomList
@@ -209,10 +254,11 @@ const ChatWindow = () => {
 
                 <div
                   ref={messagesContainerRef}
-                  className="flex-1 overflow-y-auto p-4 space-y-2 scroll-smooth"
-                  style={{ scrollBehavior: 'smooth' }}
+                  className="flex-1 overflow-y-auto p-4 space-y-2"
+                  style={{ scrollBehavior: 'auto' }}
                 >
-                  {loading ? (
+                  {/* ✅ Only show loading on initial load or when no messages */}
+                  {loading && (isInitialLoad || messages.length === 0) ? (
                     <div className="flex items-center justify-center h-full">
                       <div className="text-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
@@ -226,12 +272,21 @@ const ChatWindow = () => {
                     </div>
                   ) : (
                     <>
+                      {/* ✅ Always show messages even during background loading */}
                       {messages.map((message, index) => (
                         <Message
                           key={`${message.messageId}-${index}`}
                           message={message}
                         />
                       ))}
+
+                      {/* ✅ Show subtle loading indicator at bottom for new messages */}
+                      {loading && !isInitialLoad && messages.length > 0 && (
+                        <div className="flex justify-center py-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 opacity-50"></div>
+                        </div>
+                      )}
+
                       <div
                         ref={messagesEndRef}
                         className="h-1 w-full"

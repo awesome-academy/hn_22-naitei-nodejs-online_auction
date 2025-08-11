@@ -13,6 +13,9 @@ export const useChat = () => {
   const [typing, setTyping] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // ✅ Cache messages cho từng room
+  const messagesCache = useRef(new Map());
+
   const { user } = useUser();
   const { showToastNotification } = useNotification();
   const typingTimeoutRef = useRef(null);
@@ -42,13 +45,25 @@ export const useChat = () => {
 
     try {
       setLoading(true);
+
+      // ✅ Check cache trước
+      const cachedMessages = messagesCache.current.get(chatRoomId);
+      if (cachedMessages && cachedMessages.length > 0) {
+        setMessages(cachedMessages);
+        setLoading(false);
+        return;
+      }
+
       const response = await chatApiService.getMessages(chatRoomId, {
         limit: 50,
         offset: 0
       });
 
       if (response.success) {
-        setMessages(response.data || []);
+        const newMessages = response.data || [];
+        setMessages(newMessages);
+        // ✅ Cache messages
+        messagesCache.current.set(chatRoomId, newMessages);
       } else {
         setMessages([]);
       }
@@ -96,13 +111,15 @@ export const useChat = () => {
   const selectRoom = useCallback(async (room) => {
     try {
       setCurrentRoom(room);
-      setMessages([]);
+
+      // ✅ Load từ cache hoặc API
       await loadMessages(room.chatRoomId);
 
       if (connected && chatWebSocketService.getConnectionStatus().isConnected) {
         chatWebSocketService.joinRoom(room.chatRoomId);
       }
 
+      // ✅ Mark as read ngay khi vào room
       setTimeout(() => {
         markMessagesAsRead(room.chatRoomId);
       }, 500);
@@ -127,21 +144,21 @@ export const useChat = () => {
         if (response.success) {
           const newMessage = response.data;
           if (newMessage) {
-            setMessages(prev => {
-              const exists = prev.some(m => m.messageId === newMessage.messageId);
-              if (exists) return prev;
-              return [...prev, newMessage];
-            });
+            const updatedMessages = [...messages, {
+              ...newMessage,
+              tempId: Date.now()
+            }];
+
+            setMessages(updatedMessages);
+            // ✅ Update cache
+            messagesCache.current.set(currentRoom.chatRoomId, updatedMessages);
           }
-          fetchRooms();
-        } else {
-          throw new Error(response.message);
         }
       }
     } catch (error) {
       showToastNotification('Failed to send message', 'error');
     }
-  }, [currentRoom?.chatRoomId, connected, fetchRooms, showToastNotification]);
+  }, [currentRoom?.chatRoomId, connected, messages, showToastNotification]);
 
   const createChatRoom = useCallback(async (otherUserId) => {
     try {
@@ -173,19 +190,18 @@ export const useChat = () => {
       const response = await chatApiService.deleteChatRoom(chatRoomId);
 
       if (response.success) {
-        // ✅ Remove room từ state
         setRooms(prev => prev.filter(room => room.chatRoomId !== chatRoomId));
 
-        // ✅ Clear current room nếu đang xem room bị xóa
+        // ✅ Clear cache for deleted room
+        messagesCache.current.delete(chatRoomId);
+
         if (currentRoom?.chatRoomId === chatRoomId) {
           setCurrentRoom(null);
           setMessages([]);
         }
 
-        // ✅ Update unread count
         await fetchUnreadCount();
 
-        // ✅ Show success notification
         showToastNotification(
           response.message || 'Chat room deleted successfully',
           'success'
@@ -226,38 +242,48 @@ export const useChat = () => {
     };
 
     const handleMessage = (message) => {
-      if (currentRoom &&
-        (message.roomId === currentRoom.chatRoomId ||
-          message.chatRoomId === currentRoom.chatRoomId)) {
+      // ✅ Check if message is for current room
+      const isCurrentRoom = currentRoom &&
+        (message.roomId === currentRoom.chatRoomId || message.chatRoomId === currentRoom.chatRoomId);
 
+      if (isCurrentRoom) {
+        // ✅ User đang ở trong room này
         if (message.senderId !== user.id) {
-          setMessages(prev => {
-            const exists = prev.some(m => m.messageId === message.messageId);
-            if (!exists) {
-              return [...prev, message];
-            }
-            return prev;
-          });
+          const updatedMessages = [...messages, message];
+          setMessages(updatedMessages);
+          // ✅ Update cache
+          messagesCache.current.set(currentRoom.chatRoomId, updatedMessages);
+
+          // ✅ Tự động mark as read khi nhận message trong current room
+          setTimeout(() => {
+            markMessagesAsRead(currentRoom.chatRoomId);
+          }, 100);
         }
-      } else if (message.notificationText) {
-        showToastNotification(
-          message.notificationText || `New message from ${message.sender?.email || 'Unknown'}`,
-          'info'
-        );
+      } else {
+        // ✅ Message từ room khác - hiển thị notification
+        if (message.notificationText) {
+          showToastNotification(
+            message.notificationText || `New message from ${message.sender?.email || 'Unknown'}`,
+            'info'
+          );
+        }
       }
+
+      // ✅ Always update rooms and unread count
       fetchRooms();
       fetchUnreadCount();
     };
 
     const handleMessageSent = (data) => {
       if (data.success && currentRoom && data.data.chatRoomId === currentRoom.chatRoomId) {
-        setMessages(prev => {
-          const exists = prev.some(m => m.messageId === data.data.messageId);
-          if (!exists) {
-            return [...prev, data.data];
-          }
-          return prev;
-        });
+        const updatedMessages = [...messages, {
+          ...data.data,
+          tempId: Date.now()
+        }];
+
+        setMessages(updatedMessages);
+        // ✅ Update cache
+        messagesCache.current.set(currentRoom.chatRoomId, updatedMessages);
       }
       fetchRooms();
     };
@@ -321,7 +347,7 @@ export const useChat = () => {
 
       chatWebSocketService.disconnect();
     };
-  }, [user?.id, currentRoom, fetchRooms, fetchUnreadCount, showToastNotification, loadMessages]);
+  }, [user?.id, currentRoom, messages, fetchRooms, fetchUnreadCount, showToastNotification, loadMessages, markMessagesAsRead]);
 
   return {
     rooms,
