@@ -29,6 +29,7 @@ import { SortDirection } from '@common/types/sort-direction.enum';
 import { UpdateAuctionDto } from './dtos/update-auction.body.dto';
 import { AuthType } from '@common/types/auth-type.enum';
 import { Auth } from '@common/decorators/auth.decorator';
+import { CancelAuctionDto } from './dtos/cancel-auction.body.dto';
 
 @Controller('auctions')
 export class AuctionController {
@@ -99,12 +100,11 @@ export class AuctionController {
     await this.auctionService.confirmAuction(auctionId);
   }
 
-  @Patch('cancel/:auctionId')
-  @Auth(AuthType.ACCESS_TOKEN)
-  @Roles(Role.ADMIN)
+  @Patch('cancel')
+  @Roles(Role.ADMIN, Role.SELLER)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async cancelAuction(@Param('auctionId') auctionId: string): Promise<void> {
-    await this.auctionService.cancelAuction(auctionId);
+  async cancelAuction(@Body() cancelAuctionDto: CancelAuctionDto): Promise<String> {
+    return await this.auctionService.cancelAuction(cancelAuctionDto);
   }
 
   @Patch('close/:auctionId')

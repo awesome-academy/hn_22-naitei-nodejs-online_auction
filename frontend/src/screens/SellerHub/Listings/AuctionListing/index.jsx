@@ -1,15 +1,16 @@
-import React from "react";
-import { Title, PrimaryButton, SecondaryButton, LoadingSpinner } from "@/components/ui/index.js";
+import React, { useState } from "react";
+import { Title, PrimaryButton, SecondaryButton, LoadingSpinner, CancelAuctionModal } from "@/components/ui/index.js";
 import { useNavigate } from "react-router-dom";
 import { useAuctionListing } from "@/hooks/useAuctionListing.js";
 import { AUCTION_STATUS, getAuctionStatusConfig } from "@/constants/auctionStatus.js";
-import { IoCreateOutline, IoTrashOutline, IoSearchOutline, IoChevronDownOutline } from "react-icons/io5";
+import { IoCreateOutline, IoBanOutline, IoSearchOutline, IoChevronDownOutline } from "react-icons/io5";
 
 const AuctionListing = () => {
   const navigate = useNavigate();
   const {
     auctions,
     loading,
+    cancelLoading,
     searchTerm,
     setSearchTerm,
     filterPeriod,
@@ -19,9 +20,32 @@ const AuctionListing = () => {
     formatDate,
     formatPrice,
     handleEditAuction,
-    handleDeleteAuction,
+    handleCancelAuction,
     handleReopenAuction,
   } = useAuctionListing();
+
+  // Modal state
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [selectedAuction, setSelectedAuction] = useState(null);
+
+  const openCancelModal = (auction) => {
+    setSelectedAuction(auction);
+    setCancelModalOpen(true);
+  };
+
+  const closeCancelModal = () => {
+    setCancelModalOpen(false);
+    setSelectedAuction(null);
+  };
+
+  const handleConfirmCancel = async (auctionId, reason) => {
+    try {
+      await handleCancelAuction(auctionId, reason);
+      closeCancelModal();
+    } catch (error) {
+      // Error is already handled in the hook
+    }
+  };
 
   const getStatusBadge = (status) => {
     const config = getAuctionStatusConfig(status);
@@ -50,11 +74,11 @@ const AuctionListing = () => {
               <IoCreateOutline size={16} />
             </button>
             <button
-              onClick={() => handleDeleteAuction(auction)}
+              onClick={() => openCancelModal(auction)}
               className="p-2 rounded-md text-red-600 bg-red-50 hover:bg-red-100 hover:text-red-700 transition-colors"
-              title="Delete Auction"
+              title="Cancel Auction"
             >
-              <IoTrashOutline size={16} />
+              <IoBanOutline size={16} />
             </button>
           </div>
         );
@@ -69,16 +93,17 @@ const AuctionListing = () => {
             </SecondaryButton>
           </div>
         );
+      case AUCTION_STATUS.OPEN:
+      case AUCTION_STATUS.READY:
+        return (
+          <div className="flex gap-2">
+            <span className="text-gray-400 text-sm">In progress</span>
+          </div>
+        );
       case AUCTION_STATUS.COMPLETED:
         return (
           <div className="flex gap-2">
-            <button
-              onClick={() => handleDeleteAuction(auction)}
-              className="p-2 rounded-md text-red-600 bg-red-50 hover:bg-red-100 hover:text-red-700 transition-colors"
-              title="Delete Auction"
-            >
-              <IoTrashOutline size={16} />
-            </button>
+            <span className="text-green-600 text-sm font-medium">Completed</span>
           </div>
         );
       default:
@@ -258,6 +283,15 @@ const AuctionListing = () => {
           )}
         </div>
       </div>
+
+      {/* Cancel Auction Modal */}
+      <CancelAuctionModal
+        isOpen={cancelModalOpen}
+        onClose={closeCancelModal}
+        onConfirm={handleConfirmCancel}
+        auction={selectedAuction}
+        loading={cancelLoading}
+      />
     </div>
   );
 };

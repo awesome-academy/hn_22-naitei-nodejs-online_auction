@@ -13,6 +13,7 @@ export const useAuctionListing = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [filterPeriod, setFilterPeriod] = useState("Last 90 days");
     const [sortBy, setSortBy] = useState("Current price");
+    const [cancelLoading, setCancelLoading] = useState(false);
 
     // Fetch seller's auctions
     const fetchMyAuctions = useCallback(async () => {
@@ -62,9 +63,28 @@ export const useAuctionListing = () => {
         showToastNotification('Edit auction functionality coming soon', 'info');
     }, [showToastNotification]);
 
-    const handleDeleteAuction = useCallback((auction) => {
-        // Implement delete auction functionality
-        showToastNotification('Delete auction functionality coming soon', 'info');
+    const handleCancelAuction = useCallback(async (auctionId, reason) => {
+        try {
+            setCancelLoading(true);
+            await auctionService.cancelAuction(auctionId, reason);
+
+            // Update the auction status locally
+            setAuctions(prevAuctions =>
+                prevAuctions.map(auction =>
+                    auction.auctionId === auctionId
+                        ? { ...auction, status: 'CANCELED', cancelReason: reason }
+                        : auction
+                )
+            );
+
+            showToastNotification('Auction cancelled successfully', 'success');
+        } catch (err) {
+            console.error('Failed to cancel auction:', err);
+            showToastNotification(err.message || 'Failed to cancel auction', 'error');
+            throw err; // Re-throw to let the modal handle it
+        } finally {
+            setCancelLoading(false);
+        }
     }, [showToastNotification]);
 
     const handleReopenAuction = useCallback((auction) => {
@@ -72,16 +92,12 @@ export const useAuctionListing = () => {
         showToastNotification('Reopen auction functionality coming soon', 'info');
     }, [showToastNotification]);
 
-    const handleCancelAuction = useCallback((auction) => {
-        // Implement cancel auction functionality
-        showToastNotification('Cancel auction functionality coming soon', 'info');
-    }, [showToastNotification]);
-
     return {
         // Data
         auctions: filteredAuctions,
         loading,
         error,
+        cancelLoading,
 
         // Search and filters
         searchTerm,
@@ -97,9 +113,8 @@ export const useAuctionListing = () => {
 
         // Actions
         handleEditAuction,
-        handleDeleteAuction,
-        handleReopenAuction,
         handleCancelAuction,
+        handleReopenAuction,
         refreshAuctions: fetchMyAuctions,
     };
 };

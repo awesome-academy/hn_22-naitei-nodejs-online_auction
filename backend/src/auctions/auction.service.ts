@@ -34,6 +34,7 @@ import { ERROR_AUTION_ALREADY_IN_WATCHLIST, ERROR_AUTION_CANT_BE_ADDED_TO_WATCHL
 import { AddToWatchlistResponseDto } from './dtos/add-to-watchlist.response.dto';
 import { RemoveFromWatchlistDto, RemoveFromWatchlistResponseDto } from './dtos/remove-from-watchlist.dto';
 import { UpdateAuctionDto } from './dtos/update-auction.body.dto';
+import { CancelAuctionDto } from './dtos/cancel-auction.body.dto';
 
 @Injectable()
 export class AuctionService {
@@ -325,9 +326,9 @@ export class AuctionService {
     });
   }
 
-  async cancelAuction(auctionId: string): Promise<void> {
+  async cancelAuction(cancelAuctionDto: CancelAuctionDto): Promise<String> {
     const auction = await this.prisma.auction.findUnique({
-      where: { auctionId },
+      where: { auctionId: cancelAuctionDto.auctionId },
     });
 
     if (!auction) {
@@ -335,18 +336,19 @@ export class AuctionService {
     }
 
     if (
-      auction.status !== AuctionStatus.PENDING &&
-      auction.status !== AuctionStatus.READY
+      auction.status !== AuctionStatus.PENDING
     ) {
       throw new BadRequestException(ERROR_AUCTION_NOT_CANCELLABLE);
     }
 
     await this.prisma.auction.update({
-      where: { auctionId },
+      where: { auctionId: cancelAuctionDto.auctionId },
       data: {
+        cancelReason: cancelAuctionDto.reason,
         status: AuctionStatus.CANCELED,
       },
     });
+    return 'Auction canceled successfully';
   }
 
   async closeAuction(auctionId: string): Promise<void> {

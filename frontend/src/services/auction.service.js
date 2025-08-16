@@ -8,6 +8,7 @@ const AUCTION_API = {
     ADD_TO_WATCHLIST: '/api/auctions/add-to-watchlist',
     REMOVE_FROM_WATCHLIST: '/api/auctions/remove-from-watchlist',
     GET_WATCHLIST: '/api/auctions/watchlist',
+    CANCEL_AUCTION: '/api/auctions/cancel',
 };
 
 export const auctionService = {
@@ -124,6 +125,25 @@ export const auctionService = {
             return Promise.reject({
                 statusCode: statusCode || 500,
                 message: message || 'Failed to fetch my auctions',
+                errorCode: code || 'INTERNAL_SERVER_ERROR',
+            });
+        }
+    },
+
+    // Cancel auction
+    cancelAuction: async (auctionId, reason) => {
+        try {
+            const response = await axiosClient.patch(`${AUCTION_API.CANCEL_AUCTION}`, {
+                auctionId,
+                reason
+            });
+            return response.data;
+        } catch (err) {
+            const statusCode = err?.status;
+            const { message, code } = err?.response?.data || {};
+            return Promise.reject({
+                statusCode: statusCode || 500,
+                message: message || 'Failed to cancel auction',
                 errorCode: code || 'INTERNAL_SERVER_ERROR',
             });
         }
