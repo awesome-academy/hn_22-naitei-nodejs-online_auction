@@ -42,6 +42,6 @@ export const menulists = [
   {
     id: 9,
     path: "/products/add",
-    link: "Add Product",
+    link: "Create Products",
   }
 ];

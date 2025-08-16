@@ -56,6 +56,8 @@ model User {
 
   watchlist Watchlist[] @relation("User_Has_Watchlist")
 
+  productComments ProductComment[] @relation("User_Has_ProductComments")
+
   @@map("users")
 }
 
@@ -199,6 +201,8 @@ model Product {
 
   auctionProducts AuctionProduct[] @relation("Product_In_Auctions")
 
+  comments ProductComment[] @relation("Product_Has_Comments")
+
   @@map("products")
 }
 
@@ -283,6 +287,7 @@ model Auction {
   winner   User?   @relation("User_Wins_Auctions", fields: [winnerId], references: [userId], onDelete: SetNull)
 
   status              AuctionStatus @default(PENDING)
+  cancelReason        String?       @map("cancel_reason") @db.Text
   minimumBidIncrement Decimal       @map("minimum_bid_increment") @db.Decimal(10, 2)
   lastBidTime         DateTime      @map("last_bid_time") @db.Timestamp(0)
   bidCount            BigInt        @default(0) @map("bid_count")
@@ -411,4 +416,22 @@ model Watchlist {
 
   @@unique([userId, auctionId])
   @@map("watchlists")
+}
+
+model ProductComment {
+  commentId String @id @default(uuid()) @map("comment_id") @db.Char(36)
+
+  productId String  @map("product_id") @db.Char(36)
+  product   Product @relation("Product_Has_Comments", fields: [productId], references: [productId], onDelete: Cascade)
+
+  userId String @map("user_id") @db.Char(36)
+  user   User   @relation("User_Has_ProductComments", fields: [userId], references: [userId], onDelete: Cascade)
+
+  content String @db.Text
+  rating  Int?   @db.Int // Rating from 1-5 stars (optional)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@map("product_comments")
 }

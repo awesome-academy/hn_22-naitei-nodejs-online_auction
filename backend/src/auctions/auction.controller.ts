@@ -29,6 +29,10 @@ import { SortDirection } from '@common/types/sort-direction.enum';
 import { UpdateAuctionDto } from './dtos/update-auction.body.dto';
 import { AuthType } from '@common/types/auth-type.enum';
 import { Auth } from '@common/decorators/auth.decorator';
+import { CancelAuctionDto } from './dtos/cancel-auction.body.dto';
+import { ReopenAuctionBodyDto, ReopenAuctionResponseDto } from './dtos/reopen-auction.dto';
+import { EditAuctionResponseDto } from './dtos/edit-auction.response.dto';
+import { EditAuctionBodyDto } from './dtos/edit-auction.body.dto';
 
 @Controller('auctions')
 export class AuctionController {
@@ -67,6 +71,14 @@ export class AuctionController {
     } as SearchAuctionQueryDto);
   }
 
+  @Roles(Role.BIDDER)
+  @Get('watchlist')
+  async getWatchlist(
+    @CurrentUser() user: any,
+  ): Promise<SearchAuctionResponseDto> {
+    return this.auctionService.getWatchlist(user);
+  }
+
   @Get(':auctionId')
   @Public()
   async getAuctionById(
@@ -99,12 +111,11 @@ export class AuctionController {
     await this.auctionService.confirmAuction(auctionId);
   }
 
-  @Patch('cancel/:auctionId')
-  @Auth(AuthType.ACCESS_TOKEN)
-  @Roles(Role.ADMIN)
+  @Patch('cancel')
+  @Roles(Role.ADMIN, Role.SELLER)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async cancelAuction(@Param('auctionId') auctionId: string): Promise<void> {
-    await this.auctionService.cancelAuction(auctionId);
+  async cancelAuction(@Body() cancelAuctionDto: CancelAuctionDto): Promise<String> {
+    return await this.auctionService.cancelAuction(cancelAuctionDto);
   }
 
   @Patch('close/:auctionId')
@@ -133,11 +144,20 @@ export class AuctionController {
     return this.auctionService.removeFromWatchlist(user, removeFromWatchlistDto);
   }
 
-  @Roles(Role.BIDDER)
-  @Post('watchlist')
-  async getWatchlist(
-    @CurrentUser() user: any,
-  ): Promise<SearchAuctionResponseDto> {
-    return this.auctionService.getWatchlist(user);
+  @Roles(Role.SELLER)
+  @Patch('reopen')
+  async reopenAuction(
+    @Body() reopenAuctionBodyDto: ReopenAuctionBodyDto,
+  ): Promise<ReopenAuctionResponseDto> {
+    return this.auctionService.reopenAuction(reopenAuctionBodyDto);
+  }
+
+  @Roles(Role.SELLER)
+  @Patch('edit/:auctionId')
+  async editAuction(
+    @Param('auctionId') auctionId: string,
+    @Body() editAuctionDto: EditAuctionBodyDto,
+  ): Promise<EditAuctionResponseDto> {
+    return this.auctionService.editAuction(auctionId, editAuctionDto);
   }
 }

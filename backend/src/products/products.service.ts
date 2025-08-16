@@ -8,7 +8,9 @@ import { CreateMultipleProductsResponseDto, CreateProductResponseDto } from './d
 import { UpdateProductDto } from './dtos/update-product.body.dto';
 import { MultipleProductsResponseDto } from './dtos/product.response.dto';
 import { GetProductResponseDto } from './dtos/get-product.response.dto';
+import { ExportProductsDto, ExportProductsResponseDto } from './dtos/export-product.dto';
 import { randomUUID } from 'crypto';
+import * as ExcelJS from 'exceljs';
 
 @Injectable()
 export class ProductsService {
@@ -85,7 +87,7 @@ export class ProductsService {
       where: {
         sellerId: userId,
         status: 'ACTIVE',
-        stockQuantity: { gt: 0 } 
+        stockQuantity: { gt: 0 }
       },
       select: {
         productId: true,
@@ -119,7 +121,7 @@ export class ProductsService {
           name: product.name,
           description: product.description,
           stockQuantity: product.stockQuantity,
-          status: 'INACTIVE',
+          status: 'ACTIVE',
           seller: {
             connect: { userId: (currUser as any).id || currUser.userId },
           },
@@ -297,5 +299,120 @@ export class ProductsService {
         name: pc.category.name,
       })),
     };
+  }
+
+  async exportProductsToExcel(currentUser: User, exportDto: ExportProductsDto): Promise<ExportProductsResponseDto> {
+    try {
+      // Get products based on filters
+      const whereClause: any = {};
+
+      if (currentUser.role !== 'ADMIN') {
+        whereClause.sellerId = currentUser.userId;
+      } else if (exportDto.sellerId) {
+        whereClause.sellerId = exportDto.sellerId;
+      }
+
+      if (exportDto.status) {
+        whereClause.status = exportDto.status;
+      }
+
+      const products = await this.prisma.product.findMany({
+        where: whereClause,
+        include: {
+          seller: {
+            include: {
+              profile: true,
+            },
+          },
+          images: {
+            where: { isPrimary: true },
+            take: 1,
+          },
+          productCategories: {
+            include: {
+              category: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      // Create Excel workbook
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Products');
+
+      // Define headers
+      const headers = [
+        'Product ID',
+        'Product Name',
+        'Description',
+        'Stock Quantity',
+        'Status',
+        'Seller Name',
+        'Seller Email',
+        'Categories',
+        'Primary Image',
+        'Created At',
+        'Updated At',
+      ];
+
+      // Add headers to worksheet
+      worksheet.addRow(headers);
+
+      // Style headers
+      const headerRow = worksheet.getRow(1);
+      headerRow.font = { bold: true };
+      headerRow.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' },
+      };
+
+      // Add data rows
+      products.forEach((product) => {
+        const row = [
+          product.productId,
+          product.name,
+          product.description || '',
+          product.stockQuantity,
+          product.status,
+          product.seller.profile?.fullName || '',
+          product.seller.email,
+          product.productCategories.map(pc => pc.category.name).join(', '),
+          product.images.length > 0 ? product.images[0].imageUrl : '',
+          product.createdAt.toISOString().split('T')[0],
+          product.updatedAt.toISOString().split('T')[0],
+        ];
+        worksheet.addRow(row);
+      });
+
+      // Auto-fit columns
+      worksheet.columns.forEach((column) => {
+        let maxLength = 0;
+        column.eachCell?.({ includeEmpty: true }, (cell) => {
+          const columnLength = cell.value ? cell.value.toString().length : 10;
+          if (columnLength > maxLength) {
+            maxLength = columnLength;
+          }
+        });
+        column.width = maxLength < 10 ? 10 : maxLength > 50 ? 50 : maxLength;
+      });
+
+      // Generate buffer
+      const buffer = await workbook.xlsx.writeBuffer();
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `products_export_${timestamp}.xlsx`;
+
+      return {
+        filename,
+        buffer: Buffer.from(buffer),
+        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      throw new BadRequestException(`Failed to export products: ${errorMessage}`);
+    }
   }
 }
