@@ -119,7 +119,7 @@ export class ProductsService {
           name: product.name,
           description: product.description,
           stockQuantity: product.stockQuantity,
-          status: 'INACTIVE',
+          status: 'ACTIVE',
           seller: {
             connect: { userId: (currUser as any).id || currUser.userId },
           },

@@ -36,7 +36,7 @@ export const ERROR_AUCTION_NOT_PENDING = {
 
 export const ERROR_AUCTION_NOT_CANCELLABLE = {
   statusCode: 400,
-  message: 'Only auctions in PENDING or READY status can be canceled.',
+  message: 'Only auctions in PENDING status can be canceled.',
   errorCode: 'AUCTION_NOT_CANCELLABLE',
 };
 
@@ -46,9 +46,9 @@ export const ERROR_AUCTION_NOT_CLOSABLE = {
   errorCode: 'AUCTION_NOT_CLOSABLE',
 };
 
-export const ERROR_PRODUCT_NOT_AVAILABLE = (productId: string) => ({
+export const ERROR_PRODUCT_NOT_AVAILABLE = (productName: string) => ({
   statusCode: 404,
-  message: `Product not available: ${productId}`,
+  message: `Product not available: ${productName}`,
   errorCode: 'PRODUCT_NOT_AVAILABLE',
 });
 

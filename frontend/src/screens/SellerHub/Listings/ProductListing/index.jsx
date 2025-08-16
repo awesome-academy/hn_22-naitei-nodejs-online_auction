@@ -106,8 +106,8 @@ const ProductListing = () => {
     setDeleteModal({ isOpen: false, product: null });
   };
 
-  const handleCreateProduct = () => {
-    navigate('/products/add');
+  const handleCreateMultipleProducts = () => {
+    navigate('/products/add-multiple');
   };
 
   if (loading) {
@@ -122,12 +122,12 @@ const ProductListing = () => {
           Manage product
         </Title>
         
-        <div className="relative">
+        <div className="flex gap-3">
           <PrimaryButton
-            onClick={handleCreateProduct}
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-full flex items-center gap-2 transition-colors duration-200"
+            onClick={handleCreateMultipleProducts}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full flex items-center gap-2 transition-colors duration-200"
           >
-            Create product
+            Create products
             <IoChevronDownOutline size={16} />
           </PrimaryButton>
         </div>
@@ -162,14 +162,16 @@ const ProductListing = () => {
             No products yet
           </Title>
           <p className="text-gray-600 mb-6">
-            Start selling by creating your first product
+            Start selling by creating your products
           </p>
-          <PrimaryButton
-            onClick={handleCreateProduct}
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors duration-200"
-          >
-            Create your first product
-          </PrimaryButton>
+          <div className="flex gap-4 justify-center">
+            <PrimaryButton
+              onClick={handleCreateMultipleProducts}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors duration-200"
+            >
+              Create products
+            </PrimaryButton>
+          </div>
         </div>
       )}
       
