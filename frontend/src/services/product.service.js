@@ -5,9 +5,12 @@ const PRODUCT_API = {
   UPLOAD_IMAGE: '/api/products/upload',
   MY_PRODUCTS: '/api/products/my-products',
   MY_ACTIVE_PRODUCTS: '/api/products/my-products/active',
+  USER_PRODUCTS: (userId) => `/api/products/user/${userId}`,
+  USER_ACTIVE_PRODUCTS: (userId) => `/api/products/user/${userId}/active`,
   UPDATE_PRODUCTS: '/api/products',
   DELETE_PRODUCTS: '/api/products',
   GET_PRODUCT_BY_ID: '/api/products',
+  EXPORT_PRODUCTS: '/api/products/export/excel',
 };
 
 export const productService = {
@@ -102,6 +105,38 @@ export const productService = {
     }
   },
 
+  // Get products by user ID
+  getUserProducts: async (userId) => {
+    try {
+      const response = await axiosClient.get(PRODUCT_API.USER_PRODUCTS(userId));
+      return response.data;
+    } catch (err) {
+      const statusCode = err?.status;
+      const { message, code } = err?.response?.data || {};
+      return Promise.reject({
+        statusCode: statusCode || 500,
+        message: message || 'Failed to fetch user products',
+        errorCode: code || 'INTERNAL_SERVER_ERROR',
+      });
+    }
+  },
+
+  // Get active products by user ID
+  getUserActiveProducts: async (userId) => {
+    try {
+      const response = await axiosClient.get(PRODUCT_API.USER_ACTIVE_PRODUCTS(userId));
+      return response.data;
+    } catch (err) {
+      const statusCode = err?.status;
+      const { message, code } = err?.response?.data || {};
+      return Promise.reject({
+        statusCode: statusCode || 500,
+        message: message || 'Failed to fetch user active products',
+        errorCode: code || 'INTERNAL_SERVER_ERROR',
+      });
+    }
+  },
+
   // Get product by ID
   getProductById: async (productId) => {
     try {
@@ -158,6 +193,68 @@ export const productService = {
       return Promise.reject({
         statusCode: statusCode || 500,
         message: message || 'Product deletion failed',
+        errorCode: code || 'INTERNAL_SERVER_ERROR',
+      });
+    }
+  },
+
+  // Export products to Excel
+  exportProductsToExcel: async (params = {}) => {
+    try {
+      const queryParams = new URLSearchParams();
+
+      // Add query parameters if provided
+      if (params.status) {
+        queryParams.append('status', params.status);
+      }
+      if (params.sellerId) {
+        queryParams.append('sellerId', params.sellerId);
+      }
+
+      const response = await axiosClient.get(
+        `${PRODUCT_API.EXPORT_PRODUCTS}?${queryParams.toString()}`,
+        {
+          responseType: 'blob', // Important for downloading files
+        }
+      );
+
+      // Create blob and download file
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+
+      // Get filename from response headers or create default
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = 'products_export.xlsx';
+
+      if (contentDisposition) {
+        const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
+        if (matches != null && matches[1]) {
+          filename = matches[1].replace(/['"]/g, '');
+        }
+      }
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      return { success: true, filename };
+    } catch (err) {
+      const statusCode = err?.status;
+      const { message, code } = err?.response?.data || {};
+      return Promise.reject({
+        statusCode: statusCode || 500,
+        message: message || 'Export failed',
         errorCode: code || 'INTERNAL_SERVER_ERROR',
       });
     }

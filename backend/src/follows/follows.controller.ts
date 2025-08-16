@@ -11,7 +11,7 @@ import { Role } from '@common/enums/role.enum';
 @Controller('follows')
 @UseGuards(RoleGuard)
 export class FollowsController {
-  constructor(private readonly followsService: FollowsService) {}
+  constructor(private readonly followsService: FollowsService) { }
 
   @Get(':sellerId/isFollowing')
   @Auth(AuthType.ACCESS_TOKEN)
@@ -20,6 +20,16 @@ export class FollowsController {
     @Param('sellerId') sellerId: string,
   ): Promise<{ followerCount: number }> {
     return this.followsService.getFollowNumber(sellerId);
+  }
+
+  @Get(':sellerId/status')
+  @Auth(AuthType.ACCESS_TOKEN)
+  @Roles(Role.BIDDER)
+  async checkFollowStatus(
+    @Param('sellerId') sellerId: string,
+    @CurrentUser() currentUser: { id: string; email: string },
+  ): Promise<{ isFollowedByCurrentUser: boolean }> {
+    return this.followsService.isFollowedByCurrentUser(sellerId, currentUser);
   }
 
   @Post(':sellerId/follow')
