@@ -283,6 +283,7 @@ model Auction {
   winner   User?   @relation("User_Wins_Auctions", fields: [winnerId], references: [userId], onDelete: SetNull)
 
   status              AuctionStatus @default(PENDING)
+  cancelReason        String?       @map("cancel_reason") @db.Text
   minimumBidIncrement Decimal       @map("minimum_bid_increment") @db.Decimal(10, 2)
   lastBidTime         DateTime      @map("last_bid_time") @db.Timestamp(0)
   bidCount            BigInt        @default(0) @map("bid_count")

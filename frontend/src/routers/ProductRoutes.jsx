@@ -1,11 +1,12 @@
 import { Route, Routes } from "react-router-dom";
-import AddProduct from "@/screens/products/AddProduct/index.jsx";
+import AddMultipleProducts from "@/screens/products/AddMultipleProducts/index.jsx";
 import EditProduct from "@/screens/products/EditProduct/index.jsx";
 
 export const ProductRoutes = () => {
   return (
     <Routes>
-      <Route path="add" element={<AddProduct />} />
+      <Route path="add" element={<AddMultipleProducts />} />
+      <Route path="add-multiple" element={<AddMultipleProducts />} />
       <Route path="edit/:id" element={<EditProduct />} />
     </Routes>
   );
