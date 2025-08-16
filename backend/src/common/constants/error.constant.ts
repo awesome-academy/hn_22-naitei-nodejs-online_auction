@@ -180,3 +180,13 @@ export const ERROR_AUTION_ALREADY_IN_WATCHLIST = {
   code: 'AUCTION_ALREADY_IN_WATCHLIST',
   message: 'Auction is already in your watchlist',
 };
+
+export const ERROR_AUTION_CANT_BE_REOPENED = {
+  code: 'AUCTION_CANT_BE_REOPENED',
+  message: 'Auction cannot be reopened',
+};
+
+export const ERROR_AUTION_CANT_BE_EDITED = {
+  code: 'AUCTION_CANT_BE_EDITED',
+  message: 'Auction cannot be edited',
+};  
