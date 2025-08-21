@@ -63,9 +63,6 @@ model User {
   sellerShippings Shipping[] @relation("Seller_Ships_Orders")
   buyerShippings  Shipping[] @relation("Buyer_Receives_Shipments")
 
-  sellerShippings Shipping[] @relation("Seller_Ships_Orders")
-  buyerShippings  Shipping[] @relation("Buyer_Receives_Shipments")
-
   @@map("users")
 }
 
