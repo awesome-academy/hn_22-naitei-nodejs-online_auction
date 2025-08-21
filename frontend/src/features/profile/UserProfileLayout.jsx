@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { UserAccountInfo } from "@/features/profile/UserAccountInfo";
 import OrderListForBidder from "@/features/profile/OrderListForBidder";
+import ShippingListForBidder from "@/features/profile/ShippingListForBidder";
 import { Container } from "@/components/ui/index.js";
 import { useUser } from "@/contexts/UserContext.jsx";
 import { 
@@ -36,7 +37,7 @@ export const UserProfileLayout = () => {
     [ProfileTabs.WATCHLIST]: <div className="text-center py-8">Watchlist - Coming Soon</div>,
     [ProfileTabs.ORDER]: <OrderListForBidder />,
     [ProfileTabs.PAYMENT_HISTORY]: <div className="text-center py-8">Payment History - Coming Soon</div>,
-    [ProfileTabs.SHIPPING]: <div className="text-center py-8">Shipping - Coming Soon</div>,
+    [ProfileTabs.SHIPPING]: <ShippingListForBidder />,
   };
 
   // If user is SELLER or ADMIN, only show Account content without sidebar
