@@ -5,6 +5,7 @@ import { SellerHubListingSidebar } from "@/components/ui/SellerHubListingSidebar
 import { Routes, Route, Navigate } from "react-router-dom";
 import ProductListing from "@/screens/SellerHub/Listings/ProductListing/index.jsx";
 import AuctionListing from "@/screens/SellerHub/Listings/AuctionListing/index.jsx";
+import SellerStatistics from "@/screens/SellerHub/Statistics/index.jsx";
 import EditProduct from "@/screens/products/EditProduct/index.jsx";
 import CreateAuction from "@/screens/auctions/CreateAuction/index.jsx";
 import SellerOrderManagement from "@/screens/SellerHub/OrderManagement/index.jsx";
@@ -19,6 +20,7 @@ const SellerHub = () => {
         <Route path="orders" element={<SellerOrderManagement />} />
         
         {/* Listings Management */}
+        <Route path="statistics" element={<div className="p-6"><SellerStatistics /></div>} />
         <Route path="listings/*" element={
           <div className="flex">
             <SellerHubListingSidebar />
@@ -37,6 +39,8 @@ const SellerHub = () => {
         {/* Default redirects */}
         <Route path="" element={<Navigate to="/seller-hub/orders" replace />} />
         <Route path="*" element={<Navigate to="/seller-hub/orders" replace />} />
+        <Route path="" element={<Navigate to="/seller-hub/listings/product" replace />} />
+        <Route path="*" element={<Navigate to="/seller-hub/listings/product" replace />} />
       </Routes>
     </SellerHubLayout>
   );

@@ -13,6 +13,7 @@ export const SellerHubNavigation = () => {
     { id: 7, path: "/seller-hub/payments", label: "Payments" },
     { id: 8, path: "/seller-hub/research", label: "Research" },
     { id: 9, path: "/seller-hub/reports", label: "Reports" },
+    { id: 10, path: "/seller-hub/statistics", label: "Statistics" },
   ];
 
   return (
@@ -32,10 +33,9 @@ export const SellerHubNavigation = () => {
               key={tab.id}
               to={tab.path}
               className={({ isActive }) =>
-                `text-sm font-medium transition-colors duration-200 pb-2 border-b-2 ${
-                  isActive
-                    ? "text-gray-900 border-gray-900"
-                    : "text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300"
+                `text-sm font-medium transition-colors duration-200 pb-2 border-b-2 ${isActive
+                  ? "text-gray-900 border-gray-900"
+                  : "text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300"
                 }`
               }
             >

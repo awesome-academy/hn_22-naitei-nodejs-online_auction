@@ -11,7 +11,7 @@ export const SellerHubListingSidebar = () => {
       path: "/seller-hub/listings/auction",
     },
     {
-      id: "product", 
+      id: "product",
       label: "Product",
       path: "/seller-hub/listings/product",
     },
@@ -27,10 +27,9 @@ export const SellerHubListingSidebar = () => {
               to={item.path}
               onClick={() => setActiveTab(item.id)}
               className={({ isActive }) =>
-                `block px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                  isActive || activeTab === item.id
-                    ? "bg-green-50 text-green-700 border-l-4 border-green-500"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                `block px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${isActive || activeTab === item.id
+                  ? "bg-green-50 text-green-700 border-l-4 border-green-500"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 }`
               }
             >
