@@ -80,3 +80,5 @@ ehthumbs.db
 Thumbs.db 
 
 .vscode
+
+seed.ts

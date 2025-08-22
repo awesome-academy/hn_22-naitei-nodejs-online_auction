@@ -7,6 +7,7 @@ import { formatVND, formatDate } from "@/utils/format.js";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Pagination } from "@/components/ui/index.js";
 import ShippingDetailModal from "@/components/ui/ShippingDetailModal.jsx";
+import ConfirmDeliveryModal from "@/components/ui/ConfirmDeliveryModal.jsx";
 import { 
   IoSearchOutline, 
   IoChevronDownOutline, 
@@ -20,7 +21,8 @@ import {
   IoCalendarOutline,
   IoCodeWorkingOutline,
   IoSpeedometerOutline,
-  IoShieldCheckmarkOutline
+  IoShieldCheckmarkOutline,
+  IoRefreshOutline
 } from "react-icons/io5";
 
 const ShippingListForBidder = () => {
@@ -43,12 +45,22 @@ const ShippingListForBidder = () => {
   // Modal state
   const [selectedShipping, setSelectedShipping] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [confirmDeliveryModal, setConfirmDeliveryModal] = useState({
+    isOpen: false,
+    shippingId: null,
+    auctionTitle: '',
+  });
+  const [confirmDeliveryLoading, setConfirmDeliveryLoading] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0); // To force re-render
+  const [recentlyConfirmed, setRecentlyConfirmed] = useState(null); // Track recently confirmed shipping
   
   const limit = 10;
 
-  const fetchShippings = useCallback(async () => {
+  const fetchShippings = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
       setError("");
       
       const params = {
@@ -62,15 +74,23 @@ const ShippingListForBidder = () => {
 
       const response = await shippingService.getBidderShippings(params);
       
+      if (!silent) {
+        console.log('Fetched shippings:', response.shippings);
+      }
+      
       setShippings(response.shippings || []);
       setTotalPages(response.pagination?.totalPages || 1);
       setTotalItems(response.pagination?.totalItems || 0);
       
     } catch (err) {
       setError(err.message || "Failed to fetch shippings");
-      showNotification("Failed to fetch shippings", "error");
+      if (!silent) {
+        showNotification("Failed to fetch shippings", "error");
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, [currentPage, statusFilter, sortBy, sortOrder, searchTerm, showNotification]);
 
@@ -78,7 +98,23 @@ const ShippingListForBidder = () => {
     if (user?.role === "BIDDER") {
       fetchShippings();
     }
-  }, [user, currentPage, statusFilter, sortBy, sortOrder, searchTerm, fetchShippings]);
+  }, [user, currentPage, statusFilter, sortBy, sortOrder, searchTerm, fetchShippings, refreshKey]);
+
+  // Auto-refresh data every 30 seconds to ensure real-time updates
+  useEffect(() => {
+    if (user?.role === "BIDDER") {
+      const interval = setInterval(() => {
+        fetchShippings(true); // Silent refresh
+      }, 30000); // Refresh every 30 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [user, fetchShippings]);
+
+  // Debug: Log when shippings state changes
+  useEffect(() => {
+    console.log('Shippings state updated:', shippings.map(s => ({ id: s.id, status: s.shippingStatus })));
+  }, [shippings]);
 
   const handleSearch = useCallback((e) => {
     e.preventDefault();
@@ -114,11 +150,70 @@ const ShippingListForBidder = () => {
     setIsModalOpen(false);
   }, []);
 
-  const handleConfirmDelivery = useCallback(async (shippingId) => {
-    // TODO: Implement confirm delivery functionality
-    console.log("Confirming delivery for shipping:", shippingId);
-    showNotification("Confirm delivery feature will be implemented soon", "info");
-  }, [showNotification]);
+  const openConfirmDeliveryModal = useCallback((shipping) => {
+    setConfirmDeliveryModal({
+      isOpen: true,
+      shippingId: shipping.id,
+      auctionTitle: shipping.auction?.title || 'Unknown Auction',
+    });
+  }, []);
+
+  const closeConfirmDeliveryModal = useCallback(() => {
+    setConfirmDeliveryModal({
+      isOpen: false,
+      shippingId: null,
+      auctionTitle: '',
+    });
+  }, []);
+
+  const handleConfirmDelivery = useCallback(async () => {
+    if (!confirmDeliveryModal.shippingId) return;
+    
+    try {
+      setConfirmDeliveryLoading(true);
+      console.log('Confirming delivery for shipping ID:', confirmDeliveryModal.shippingId);
+      
+      const response = await shippingService.confirmDelivery(confirmDeliveryModal.shippingId);
+      console.log('Confirm delivery response:', response);
+      
+      // Show success notification
+      showNotification(response.message || "Delivery confirmed successfully!", "success");
+      
+      // Close the confirmation modal immediately
+      closeConfirmDeliveryModal();
+      
+      // Force refresh data from server silently to ensure consistency
+      console.log('Refreshing shipping data after confirm delivery...');
+      await fetchShippings(true);
+      
+      // Force component re-render
+      setRefreshKey(prev => prev + 1);
+      
+      // Mark as recently confirmed
+      setRecentlyConfirmed(confirmDeliveryModal.shippingId);
+      
+      // Clear the recently confirmed after 3 seconds
+      setTimeout(() => {
+        setRecentlyConfirmed(null);
+      }, 3000);
+      
+      console.log('Shipping data refreshed successfully');
+      
+      // Also update selectedShipping if it's the same item and close detail modal
+      if (selectedShipping && selectedShipping.id === confirmDeliveryModal.shippingId) {
+        // Close the detail modal after a short delay to show the updated status
+        setTimeout(() => {
+          closeShippingDetail();
+        }, 500);
+      }
+      
+    } catch (err) {
+      console.error("Error confirming delivery:", err);
+      showNotification(err.message || "Failed to confirm delivery", "error");
+    } finally {
+      setConfirmDeliveryLoading(false);
+    }
+  }, [confirmDeliveryModal.shippingId, showNotification, closeConfirmDeliveryModal, selectedShipping, closeShippingDetail, fetchShippings]);
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -159,19 +254,29 @@ const ShippingListForBidder = () => {
         {/* Filters */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
           <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-            {/* Search */}
-            <form onSubmit={handleSearch} className="flex-1 max-w-md">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search by auction title, product name, or tracking number..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 focus:bg-white transition-colors"
-                />
-                <IoSearchOutline className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-              </div>
-            </form>
+            {/* Search and Refresh */}
+            <div className="flex gap-2 flex-1 max-w-md">
+              <form onSubmit={handleSearch} className="flex-1">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search by auction title, product name, or tracking number..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-gray-50 focus:bg-white transition-colors"
+                  />
+                  <IoSearchOutline className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                </div>
+              </form>
+              <button
+                onClick={() => fetchShippings()}
+                disabled={loading}
+                className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                title="Refresh data"
+              >
+                <IoRefreshOutline className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
 
             {/* Status Filter */}
             <div className="flex items-center gap-4">
@@ -293,7 +398,12 @@ const ShippingListForBidder = () => {
                 const StatusIcon = getStatusIcon(shipping.shippingStatus);
                 
                 return (
-                  <div key={shipping.id} className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 overflow-hidden">
+                  <div 
+                    key={`${shipping.id}-${shipping.shippingStatus}-${recentlyConfirmed === shipping.id ? 'confirmed' : ''}`} 
+                    className={`bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 overflow-hidden ${
+                      recentlyConfirmed === shipping.id ? 'ring-2 ring-green-500 shadow-lg' : ''
+                    }`}
+                  >
                     {/* Status Bar */}
                     <div className={`h-1 ${colors.bg}`}></div>
                     
@@ -418,7 +528,7 @@ const ShippingListForBidder = () => {
                               </button>
                               {shipping.shippingStatus === 'IN_TRANSIT' && (
                                 <button
-                                  onClick={() => handleConfirmDelivery(shipping.id)}
+                                  onClick={() => openConfirmDeliveryModal(shipping)}
                                   className="w-full bg-green text-white px-4 py-2.5 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center gap-2 font-medium text-sm"
                                 >
                                   <IoCheckmarkCircleOutline className="w-4 h-4" />
@@ -455,8 +565,29 @@ const ShippingListForBidder = () => {
             shipping={selectedShipping}
             isOpen={isModalOpen}
             onClose={closeShippingDetail}
+            onConfirmDelivery={openConfirmDeliveryModal}
           />
         )}
+
+        {/* Confirm Delivery Modal */}
+        {/* Shipping Detail Modal */}
+        {isModalOpen && selectedShipping && (
+          <ShippingDetailModal
+            shipping={selectedShipping}
+            isOpen={isModalOpen}
+            onClose={closeShippingDetail}
+            onConfirmDelivery={openConfirmDeliveryModal}
+          />
+        )}
+
+        {/* Confirm Delivery Modal */}
+        <ConfirmDeliveryModal
+          isOpen={confirmDeliveryModal.isOpen}
+          onClose={closeConfirmDeliveryModal}
+          onConfirm={handleConfirmDelivery}
+          auctionTitle={confirmDeliveryModal.auctionTitle}
+          isLoading={confirmDeliveryLoading}
+        />
       </div>
     </div>
   );
