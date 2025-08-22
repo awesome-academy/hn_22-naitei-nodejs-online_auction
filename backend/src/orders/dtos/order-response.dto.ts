@@ -27,11 +27,16 @@ export interface OrderResponseDto {
         phoneNumber: string | null;
       } | null;
     };
-    product?: {
-      productId: string;
-      name: string;
-      images: string[];
-    } | null;
+    auctionProducts?: Array<{
+      product: {
+        productId: string;
+        name: string;
+        images: Array<{
+          imageUrl: string;
+          isPrimary: boolean;
+        }>;
+      };
+    }>;
   };
 
   user?: {

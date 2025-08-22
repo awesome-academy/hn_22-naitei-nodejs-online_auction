@@ -1,5 +1,6 @@
 import React from "react";
 import { IoEyeOutline, IoTimeOutline, IoPersonOutline, IoCardOutline } from "react-icons/io5";
+import { getOrderProductInfo, handleImageError } from "@/utils/imageUtils.js";
 
 const SellerOrderTable = ({
   orders,
@@ -19,17 +20,7 @@ const SellerOrderTable = ({
   };
 
   const getProductInfo = (order) => {
-    if (!order.auction?.auctionProducts || order.auction.auctionProducts.length === 0) {
-      return { name: "N/A", image: null };
-    }
-    
-    const product = order.auction.auctionProducts[0].product;
-    const primaryImage = product.images?.find(img => img.isPrimary) || product.images?.[0];
-    
-    return {
-      name: product.name || "N/A",
-      image: primaryImage?.imageUrl || null
-    };
+    return getOrderProductInfo(order);
   };
 
   if (loading) {
@@ -90,13 +81,22 @@ const SellerOrderTable = ({
                   {/* Product & Auction */}
                   <td className="px-4 py-4 w-[300px]">
                     <div className="flex items-center">
-                      <div className="h-10 w-10 flex-shrink-0">
+                      <div className="h-10 w-10 flex-shrink-0 relative">
                         {productInfo.image ? (
-                          <img
-                            className="h-10 w-10 rounded-lg object-cover"
-                            src={productInfo.image}
-                            alt={productInfo.name}
-                          />
+                          <>
+                            <img
+                              className="h-10 w-10 rounded-lg object-cover"
+                              src={productInfo.image}
+                              alt={productInfo.name}
+                              onError={(e) => handleImageError(e)}
+                            />
+                            <div 
+                              className="absolute inset-0 h-10 w-10 rounded-lg bg-gray-200 flex items-center justify-center"
+                              style={{ display: 'none' }}
+                            >
+                              <IoCardOutline className="text-gray-400" size={16} />
+                            </div>
+                          </>
                         ) : (
                           <div className="h-10 w-10 rounded-lg bg-gray-200 flex items-center justify-center">
                             <IoCardOutline className="text-gray-400" size={16} />

@@ -79,4 +79,6 @@ temp/
 ehthumbs.db
 Thumbs.db 
 
-.vscode
+.vscode 
+
+seed.ts
