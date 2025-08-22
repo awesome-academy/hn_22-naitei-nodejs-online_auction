@@ -1,5 +1,6 @@
 import React from "react";
 import { IoCloseOutline, IoReceiptOutline, IoPerson, IoStorefront, IoCalendarOutline, IoCardOutline } from "react-icons/io5";
+import { getPrimaryImageUrl, handleImageError } from "@/utils/imageUtils";
 
 const OrderDetailsModal = ({ 
   isOpen, 
@@ -12,17 +13,29 @@ const OrderDetailsModal = ({
   if (!isOpen || !order) return null;
 
   const getProductInfo = (order) => {
-    if (!order.auction?.product) {
-      return { name: "N/A", image: null };
+    // Handle direct product reference (order.auction.product)
+    if (order.auction?.product) {
+      const product = order.auction.product;
+      const primaryImage = getPrimaryImageUrl(product.images);
+      
+      return {
+        name: product.name || "N/A",
+        image: primaryImage
+      };
     }
     
-    const product = order.auction.product;
-    const primaryImage = product.images?.length > 0 ? product.images[0] : null;
+    // Handle auctionProducts array structure (order.auction.auctionProducts)
+    if (order.auction?.auctionProducts && order.auction.auctionProducts.length > 0) {
+      const product = order.auction.auctionProducts[0].product;
+      const primaryImage = getPrimaryImageUrl(product.images);
+      
+      return {
+        name: product.name || "N/A",
+        image: primaryImage
+      };
+    }
     
-    return {
-      name: product.name || "N/A",
-      image: primaryImage
-    };
+    return { name: "N/A", image: null };
   };
 
   const productInfo = getProductInfo(order);
@@ -134,6 +147,7 @@ const OrderDetailsModal = ({
                     className="h-16 w-16 rounded-lg object-cover"
                     src={productInfo.image}
                     alt={productInfo.name}
+                    onError={handleImageError}
                   />
                 ) : (
                   <div className="h-16 w-16 rounded-lg bg-gray-200 flex items-center justify-center">

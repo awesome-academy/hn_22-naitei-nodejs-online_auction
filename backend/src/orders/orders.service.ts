@@ -61,7 +61,7 @@ export class OrdersService {
         break;
 
       case Role.ADMIN:
-        // Admin can see all orders 
+        // Admin can see all orders
         break;
 
       default:
@@ -226,16 +226,16 @@ export class OrdersService {
               endDate: order.auction.endTime,
               sellerId: order.auction.sellerId,
               seller: order.auction.seller,
-              product: order.auction.auctionProducts[0]?.product
-                ? {
-                    productId:
-                      order.auction.auctionProducts[0].product.productId,
-                    name: order.auction.auctionProducts[0].product.name,
-                    images: order.auction.auctionProducts[0].product.images.map(
-                      (img) => img.imageUrl,
-                    ),
-                  }
-                : null,
+              auctionProducts: order.auction.auctionProducts.map((ap) => ({
+                product: {
+                  productId: ap.product.productId,
+                  name: ap.product.name,
+                  images: ap.product.images.map((img) => ({
+                    imageUrl: img.imageUrl,
+                    isPrimary: img.isPrimary,
+                  })),
+                },
+              })),
             }
           : undefined,
       }));
