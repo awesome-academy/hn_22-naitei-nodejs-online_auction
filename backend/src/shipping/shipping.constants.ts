@@ -87,12 +87,33 @@ export const SHIPPING_ERRORS = {
     message: 'Failed to confirm delivery. Please try again later.',
     errorCode: 'DELIVERY_CONFIRMATION_FAILED',
   },
+  SHIPPED_NOT_FOUND: {
+    statusCode: 404,
+    message: 'Shipping record not found',
+    errorCode: 'SHIPPED_NOT_FOUND',
+  },
+  SHIPPED_ACCESS_DENIED: {
+    statusCode: 403,
+    message: 'You are not authorized to confirm this shipment',
+    errorCode: 'SHIPPED_ACCESS_DENIED',
+  },
+  SHIPPED_INVALID_STATUS: {
+    statusCode: 400,
+    message: 'Can only confirm shipment for orders that are paid',
+    errorCode: 'SHIPPED_INVALID_STATUS',
+  },
+  SHIPPED_CONFIRMATION_FAILED: {
+    statusCode: 500,
+    message: 'Failed to confirm shipment. Please try again later.',
+    errorCode: 'SHIPPED_CONFIRMATION_FAILED',
+  },
 } as const;
 
 export const SHIPPING_MESSAGES = {
   FETCH_SUCCESS: 'Shipping records retrieved successfully',
   NO_RECORDS_FOUND: 'No shipping records found for the given criteria',
   DELIVERY_CONFIRMED: 'Delivery confirmed successfully',
+  SHIPPED_CONFIRMED: 'Shipment confirmed successfully',
 } as const;
 
 export const VALIDATION_RULES = {

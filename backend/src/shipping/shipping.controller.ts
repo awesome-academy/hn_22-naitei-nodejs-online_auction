@@ -5,6 +5,7 @@ import {
   Param,
   Query,
   UseGuards,
+  Body,
 } from '@nestjs/common';
 import JwtAuthGuard from '@common/guards/jwt.guard';
 import { RoleGuard } from '@common/guards/role.guard';
@@ -18,6 +19,8 @@ import { GetBidderShippingsResponseDto } from './dtos/get-bidder-shippings-respo
 import { GetSellerShippingsQueryDto } from './dtos/get-seller-shippings-query.dto';
 import { GetSellerShippingsResponseDto } from './dtos/get-seller-shippings-response.dto';
 import { ConfirmDeliveryResponseDto } from './dtos/confirm-delivery-response.dto';
+import { ConfirmShippedRequestDto } from './dtos/confirm-shipped-request.dto';
+import { ConfirmShippedResponseDto } from './dtos/confirm-shipped-response.dto';
 
 @Controller('shipping')
 @UseGuards(JwtAuthGuard, RoleGuard)
@@ -49,5 +52,15 @@ export class ShippingController {
     @CurrentUser() user: TokenPayload,
   ): Promise<ConfirmDeliveryResponseDto> {
     return this.shippingService.confirmDelivery(shippingId, user.id);
+  }
+
+  @Patch(':shippingId/confirm-shipped')
+  @Roles(Role.SELLER)
+  async confirmShipped(
+    @Param('shippingId') shippingId: string,
+    @Body() body: ConfirmShippedRequestDto,
+    @CurrentUser() user: TokenPayload,
+  ): Promise<ConfirmShippedResponseDto> {
+    return await this.shippingService.confirmShipped(shippingId, user.id, body);
   }
 }

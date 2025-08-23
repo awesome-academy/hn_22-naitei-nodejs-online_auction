@@ -167,6 +167,7 @@ CREATE TABLE `bids` (
     `auction_id` CHAR(36) NOT NULL,
     `user_id` CHAR(36) NOT NULL,
     `bid_amount` DECIMAL(19, 4) NOT NULL,
+    `isHidden` BOOLEAN NOT NULL DEFAULT false,
     `status` ENUM('PENDING', 'VALID', 'INVALID') NOT NULL,
     `created_at` TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0),
 
@@ -229,6 +230,19 @@ CREATE TABLE `notifications` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
+CREATE TABLE `product_comments` (
+    `comment_id` CHAR(36) NOT NULL,
+    `product_id` CHAR(36) NOT NULL,
+    `user_id` CHAR(36) NOT NULL,
+    `content` TEXT NOT NULL,
+    `rating` INTEGER NULL,
+    `created_at` TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0),
+    `updated_at` TIMESTAMP(0) NOT NULL,
+
+    PRIMARY KEY (`comment_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
 CREATE TABLE `orders` (
     `id` CHAR(36) NOT NULL,
     `user_id` CHAR(36) NOT NULL,
@@ -239,6 +253,26 @@ CREATE TABLE `orders` (
     `created_at` TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0),
     `updated_at` TIMESTAMP(0) NOT NULL,
 
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `shippings` (
+    `id` CHAR(36) NOT NULL,
+    `order_id` CHAR(36) NULL,
+    `auction_id` CHAR(36) NOT NULL,
+    `seller_id` CHAR(36) NOT NULL,
+    `buyer_id` CHAR(36) NOT NULL,
+    `shipping_status` ENUM('PENDING', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED') NOT NULL DEFAULT 'PENDING',
+    `price` DECIMAL(19, 4) NULL,
+    `tracking_number` VARCHAR(100) NULL,
+    `shipped_at` TIMESTAMP(0) NULL,
+    `estimated_delivery` TIMESTAMP(0) NULL,
+    `actual_delivery` TIMESTAMP(0) NULL,
+    `created_at` TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0),
+    `updated_at` TIMESTAMP(0) NOT NULL,
+
+    UNIQUE INDEX `shippings_order_id_key`(`order_id`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -321,7 +355,26 @@ ALTER TABLE `watchlists` ADD CONSTRAINT `watchlists_auction_id_fkey` FOREIGN KEY
 ALTER TABLE `notifications` ADD CONSTRAINT `notifications_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE `product_comments` ADD CONSTRAINT `product_comments_product_id_fkey` FOREIGN KEY (`product_id`) REFERENCES `products`(`product_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `product_comments` ADD CONSTRAINT `product_comments_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `orders` ADD CONSTRAINT `orders_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `orders` ADD CONSTRAINT `orders_auction_id_fkey` FOREIGN KEY (`auction_id`) REFERENCES `auctions`(`auction_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `shippings` ADD CONSTRAINT `shippings_order_id_fkey` FOREIGN KEY (`order_id`) REFERENCES `orders`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `shippings` ADD CONSTRAINT `shippings_auction_id_fkey` FOREIGN KEY (`auction_id`) REFERENCES `auctions`(`auction_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `shippings` ADD CONSTRAINT `shippings_seller_id_fkey` FOREIGN KEY (`seller_id`) REFERENCES `users`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `shippings` ADD CONSTRAINT `shippings_buyer_id_fkey` FOREIGN KEY (`buyer_id`) REFERENCES `users`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
