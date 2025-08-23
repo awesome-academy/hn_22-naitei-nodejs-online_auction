@@ -56,8 +56,8 @@ model User {
 
   watchlist Watchlist[] @relation("User_Has_Watchlist")
 
-  notifications Notification[] @relation("UserNotifications")
-  orders        Order[]        @relation("User_Has_Orders")
+  notifications   Notification[]   @relation("UserNotifications")
+  orders          Order[]          @relation("User_Has_Orders")
   productComments ProductComment[] @relation("User_Has_ProductComments")
 
   sellerShippings Shipping[] @relation("Seller_Ships_Orders")
@@ -457,7 +457,6 @@ model Notification {
   metadata  Json?    @db.Json
 
   @@map("notifications")
-
 }
 
 model ProductComment {
@@ -493,11 +492,16 @@ model Order {
   createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt      DateTime    @updatedAt @map("updated_at") @db.Timestamp(0)
 
+  shipping Shipping? @relation("Order_Has_Shipping")
+
   @@map("orders")
 }
 
 model Shipping {
   id String @id @default(uuid()) @db.Char(36)
+
+  orderId String? @unique @map("order_id") @db.Char(36)
+  order   Order?  @relation("Order_Has_Shipping", fields: [orderId], references: [orderId], onDelete: Cascade)
 
   auctionId String  @map("auction_id") @db.Char(36)
   auction   Auction @relation("Auction_Has_Shipping", fields: [auctionId], references: [auctionId], onDelete: Cascade)

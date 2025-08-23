@@ -20,6 +20,8 @@ import { ShippingResponseDto } from './dtos/shipping-response.dto';
 import { GetBidderShippingsResponseDto } from './dtos/get-bidder-shippings-response.dto';
 import { GetSellerShippingsResponseDto } from './dtos/get-seller-shippings-response.dto';
 import { ConfirmDeliveryResponseDto } from './dtos/confirm-delivery-response.dto';
+import { ConfirmShippedRequestDto } from './dtos/confirm-shipped-request.dto';
+import { ConfirmShippedResponseDto } from './dtos/confirm-shipped-response.dto';
 import {
   DEFAULT_PAGE,
   DEFAULT_LIMIT,
@@ -351,6 +353,16 @@ export class ShippingService {
     return this.prisma.shipping.findMany({
       where: whereClause,
       include: {
+        order: {
+          select: {
+            orderId: true,
+            totalAmount: true,
+            status: true,
+            paymentDueDate: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
         seller: {
           select: {
             userId: true,
@@ -486,6 +498,16 @@ export class ShippingService {
             }
           : null,
       },
+      order: shipping.order
+        ? {
+            orderId: shipping.order.orderId,
+            totalAmount: Number(shipping.order.totalAmount),
+            status: shipping.order.status as OrderStatus,
+            paymentDueDate: shipping.order.paymentDueDate,
+            createdAt: shipping.order.createdAt,
+            updatedAt: shipping.order.updatedAt,
+          }
+        : undefined,
     }));
   }
 
@@ -598,6 +620,106 @@ export class ShippingService {
 
       throw new InternalServerErrorException(
         SHIPPING_ERRORS.DELIVERY_CONFIRMATION_FAILED,
+      );
+    }
+  }
+
+  async confirmShipped(
+    shippingId: string,
+    sellerId: string,
+    requestData: ConfirmShippedRequestDto,
+  ): Promise<ConfirmShippedResponseDto> {
+    try {
+      const shipping = await this.prisma.shipping.findUnique({
+        where: { id: shippingId },
+        include: {
+          auction: {
+            include: {
+              orders: true,
+            },
+          },
+          order: true,
+        },
+      });
+
+      if (!shipping) {
+        throw new NotFoundException(SHIPPING_ERRORS.SHIPPED_NOT_FOUND);
+      }
+
+      if (shipping.sellerId !== sellerId) {
+        throw new ForbiddenException(SHIPPING_ERRORS.SHIPPED_ACCESS_DENIED);
+      }
+
+      // Check if the order is in PAID status and shipping is PENDING
+      if (
+        !shipping.order ||
+        shipping.order.status !== OrderStatus.PAID ||
+        shipping.shippingStatus !== ShippingStatus.PENDING
+      ) {
+        throw new BadRequestException(SHIPPING_ERRORS.SHIPPED_INVALID_STATUS);
+      }
+
+      const now = new Date();
+
+      const [updatedShipping] = await this.prisma.$transaction([
+        this.prisma.shipping.update({
+          where: { id: shippingId },
+          data: {
+            shippingStatus: ShippingStatus.SHIPPED,
+            shippedAt: now,
+            trackingNumber: requestData.trackingNumber,
+            updatedAt: now,
+          },
+        }),
+        this.prisma.order.update({
+          where: { orderId: shipping.orderId! },
+          data: {
+            status: OrderStatus.SHIPPING,
+            updatedAt: now,
+          },
+        }),
+      ]);
+
+      this.logger.log(
+        `Shipment confirmed for shipping ${shippingId} by seller ${sellerId}`,
+      );
+
+      return {
+        message: SHIPPING_MESSAGES.SHIPPED_CONFIRMED,
+        shippingInfo: {
+          id: updatedShipping.id,
+          auctionId: updatedShipping.auctionId,
+          shippingStatus: ShippingStatus.SHIPPED,
+          trackingNumber: updatedShipping.trackingNumber || undefined,
+          shippedAt: updatedShipping.shippedAt!,
+          updatedAt: updatedShipping.updatedAt,
+        },
+        orderInfo: {
+          status: OrderStatus.SHIPPING,
+          updatedAt: now,
+        },
+        auctionInfo: {
+          id: shipping.auction.auctionId,
+          title: shipping.auction.title,
+          winningBid: Number(shipping.auction.currentPrice),
+        },
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to confirm shipment for shipping ${shippingId}`,
+        error,
+      );
+
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        SHIPPING_ERRORS.SHIPPED_CONFIRMATION_FAILED,
       );
     }
   }
