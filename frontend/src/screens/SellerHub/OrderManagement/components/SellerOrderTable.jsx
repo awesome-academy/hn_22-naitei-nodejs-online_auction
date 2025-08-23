@@ -1,11 +1,12 @@
 import React from "react";
-import { IoEyeOutline, IoTimeOutline, IoPersonOutline, IoCardOutline } from "react-icons/io5";
+import { IoEyeOutline, IoTimeOutline, IoPersonOutline, IoCardOutline, IoSendOutline } from "react-icons/io5";
 import { getOrderProductInfo, handleImageError } from "@/utils/imageUtils.js";
 
 const SellerOrderTable = ({
   orders,
   loading,
   onViewDetails,
+  onConfirmShipped,
   sortBy,
   sortOrder,
   onSortChange,
@@ -174,9 +175,20 @@ const SellerOrderTable = ({
                   {/* Actions */}
                   <td className="px-4 py-4 whitespace-nowrap text-sm font-medium w-[100px]">
                     <div className="flex space-x-2">
+                      {/* Confirm Shipped Button - Only show for PAID orders */}
+                      {order.status === 'PAID' && (
+                        <button
+                          onClick={() => onConfirmShipped(order)}
+                          className="text-blue-600 hover:text-blue-900 transition-colors duration-200 p-1 rounded hover:bg-blue-50"
+                          title="Confirm Shipped"
+                        >
+                          <IoSendOutline size={16} />
+                        </button>
+                      )}
+                      
                       <button
                         onClick={() => onViewDetails(order)}
-                        className="text-green-600 hover:text-green-900 transition-colors duration-200 p-1"
+                        className="text-green-600 hover:text-green-900 transition-colors duration-200 p-1 rounded hover:bg-green-50"
                         title="View Details"
                       >
                         <IoEyeOutline size={16} />

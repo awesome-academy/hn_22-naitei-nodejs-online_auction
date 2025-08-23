@@ -93,5 +93,21 @@ export const orderService = {
         errorCode: errorCode || 'CANCEL_ORDER_ERROR',
       });
     }
+  },
+
+  confirmShipped: async (orderId, trackingNumber = '') => {
+    try {
+      const response = await axiosClient.patch(`${ORDER_API.GET_ORDERS}/${orderId}/confirm-shipped`, {
+        trackingNumber: trackingNumber || undefined
+      });
+      return response.data;
+    } catch (err) {
+      const { statusCode, message, errorCode } = err?.response?.data || {};
+      return Promise.reject({
+        statusCode: statusCode || err?.response?.status || 500,
+        message: message || 'Failed to confirm shipment',
+        errorCode: errorCode || 'CONFIRM_SHIPPED_ERROR',
+      });
+    }
   }
 };

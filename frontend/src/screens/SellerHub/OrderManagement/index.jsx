@@ -5,6 +5,7 @@ import SellerOrderTable from "./components/SellerOrderTable";
 import SellerOrderCard from "./components/SellerOrderCard";
 import SellerOrderFilters from "./components/SellerOrderFilters";
 import SellerOrderDetailsModal from "./components/SellerOrderDetailsModal";
+import ConfirmShippedModal from "./components/ConfirmShippedModal";
 import Pagination from "@/components/ui/Pagination";
 
 const SellerOrderManagement = () => {
@@ -15,6 +16,8 @@ const SellerOrderManagement = () => {
 
   // Modal states
   const [detailsModal, setDetailsModal] = useState({ isOpen: false, order: null });
+  const [confirmShippedModal, setConfirmShippedModal] = useState({ isOpen: false, order: null });
+  const [successMessage, setSuccessMessage] = useState("");
 
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -139,6 +142,29 @@ const SellerOrderManagement = () => {
     setDetailsModal({ isOpen: true, order });
   };
 
+  const handleConfirmShipped = (order) => {
+    setConfirmShippedModal({ isOpen: true, order });
+  };
+
+  const handleConfirmShippedSuccess = (orderId, newStatus) => {
+    // Update the order status in the current orders list
+    setOrders(prevOrders => 
+      prevOrders.map(order => 
+        order.orderId === orderId 
+          ? { ...order, status: newStatus }
+          : order
+      )
+    );
+    
+    // Show success message
+    setSuccessMessage("Order has been successfully marked as shipped!");
+    
+    // Clear success message after 5 seconds
+    setTimeout(() => {
+      setSuccessMessage("");
+    }, 5000);
+  };
+
   const handleSortChange = (field) => {
     if (sortBy === field) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
@@ -223,6 +249,18 @@ const SellerOrderManagement = () => {
         setStatusFilter={setStatusFilter}
       />
 
+      {/* Success Message */}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center">
+            <svg className="w-4 h-4 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <p className="text-green-800">{successMessage}</p>
+          </div>
+        </div>
+      )}
+
       {/* Error Message */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
@@ -236,6 +274,7 @@ const SellerOrderManagement = () => {
           orders={filteredOrders}
           loading={loading}
           onViewDetails={handleViewDetails}
+          onConfirmShipped={handleConfirmShipped}
           sortBy={sortBy}
           sortOrder={sortOrder}
           onSortChange={handleSortChange}
@@ -258,6 +297,7 @@ const SellerOrderManagement = () => {
                 key={order.orderId}
                 order={order}
                 onViewDetails={handleViewDetails}
+                onConfirmShipped={handleConfirmShipped}
                 getStatusColor={getStatusColor}
                 formatCurrency={formatCurrency}
               />
@@ -299,6 +339,15 @@ const SellerOrderManagement = () => {
         getStatusColor={getStatusColor}
         formatCurrency={formatCurrency}
         formatDate={formatDate}
+      />
+
+      {/* Confirm Shipped Modal */}
+      <ConfirmShippedModal
+        isOpen={confirmShippedModal.isOpen}
+        onClose={() => setConfirmShippedModal({ isOpen: false, order: null })}
+        order={confirmShippedModal.order}
+        onSuccess={handleConfirmShippedSuccess}
+        formatCurrency={formatCurrency}
       />
     </div>
     </div>
