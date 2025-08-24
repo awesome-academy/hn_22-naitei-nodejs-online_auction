@@ -1,10 +1,12 @@
 import React from "react";
-import { IoEyeOutline, IoTimeOutline, IoPersonOutline, IoCardOutline } from "react-icons/io5";
+import { IoEyeOutline, IoTimeOutline, IoPersonOutline, IoCardOutline, IoSendOutline } from "react-icons/io5";
+import { getOrderProductInfo, handleImageError } from "@/utils/imageUtils.js";
 
 const SellerOrderTable = ({
   orders,
   loading,
   onViewDetails,
+  onConfirmShipped,
   sortBy,
   sortOrder,
   onSortChange,
@@ -19,17 +21,7 @@ const SellerOrderTable = ({
   };
 
   const getProductInfo = (order) => {
-    if (!order.auction?.auctionProducts || order.auction.auctionProducts.length === 0) {
-      return { name: "N/A", image: null };
-    }
-    
-    const product = order.auction.auctionProducts[0].product;
-    const primaryImage = product.images?.find(img => img.isPrimary) || product.images?.[0];
-    
-    return {
-      name: product.name || "N/A",
-      image: primaryImage?.imageUrl || null
-    };
+    return getOrderProductInfo(order);
   };
 
   if (loading) {
@@ -90,13 +82,22 @@ const SellerOrderTable = ({
                   {/* Product & Auction */}
                   <td className="px-4 py-4 w-[300px]">
                     <div className="flex items-center">
-                      <div className="h-10 w-10 flex-shrink-0">
+                      <div className="h-10 w-10 flex-shrink-0 relative">
                         {productInfo.image ? (
-                          <img
-                            className="h-10 w-10 rounded-lg object-cover"
-                            src={productInfo.image}
-                            alt={productInfo.name}
-                          />
+                          <>
+                            <img
+                              className="h-10 w-10 rounded-lg object-cover"
+                              src={productInfo.image}
+                              alt={productInfo.name}
+                              onError={(e) => handleImageError(e)}
+                            />
+                            <div 
+                              className="absolute inset-0 h-10 w-10 rounded-lg bg-gray-200 flex items-center justify-center"
+                              style={{ display: 'none' }}
+                            >
+                              <IoCardOutline className="text-gray-400" size={16} />
+                            </div>
+                          </>
                         ) : (
                           <div className="h-10 w-10 rounded-lg bg-gray-200 flex items-center justify-center">
                             <IoCardOutline className="text-gray-400" size={16} />
@@ -174,13 +175,25 @@ const SellerOrderTable = ({
                   {/* Actions */}
                   <td className="px-4 py-4 whitespace-nowrap text-sm font-medium w-[100px]">
                     <div className="flex space-x-2">
+                      
                       <button
                         onClick={() => onViewDetails(order)}
-                        className="text-green-600 hover:text-green-900 transition-colors duration-200 p-1"
+                        className="text-green-600 hover:text-green-900 transition-colors duration-200 p-1 rounded hover:bg-green-50"
                         title="View Details"
                       >
                         <IoEyeOutline size={16} />
                       </button>
+
+                      {/* Confirm Shipped Button - Only show for PAID orders */}
+                      {order.status === 'PAID' && (
+                        <button
+                          onClick={() => onConfirmShipped(order)}
+                          className="text-blue-600 hover:text-blue-900 transition-colors duration-200 p-1 rounded hover:bg-blue-50"
+                          title="Confirm Shipped"
+                        >
+                          <IoSendOutline size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

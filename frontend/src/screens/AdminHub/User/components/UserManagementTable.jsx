@@ -7,8 +7,8 @@ const UserManagementTable = ({ users, onCreateWarning, onBanUser, onUnbanUser, o
   };
 
   const getUserAvatar = (user) => {
-    if (user.avatar || user.profile?.avatar) {
-      return user.avatar || user.profile?.avatar;
+    if (user.profile?.profileImageUrl) {
+      return user.profile.profileImageUrl;
     }
     // Default avatar placeholder
     const fullName = user.profile?.fullName || user.fullName;
@@ -50,6 +50,11 @@ const UserManagementTable = ({ users, onCreateWarning, onBanUser, onUnbanUser, o
                       className="h-10 w-10 rounded-full object-cover"
                       src={getUserAvatar(user)}
                       alt={user.profile?.fullName || user.fullName || "User"}
+                      onError={(e) => {
+                        // Fallback to placeholder if image fails to load
+                        const fullName = user.profile?.fullName || user.fullName;
+                        e.target.src = "https://via.placeholder.com/40x40/e5e7eb/6b7280?text=" + (fullName ? fullName.charAt(0).toUpperCase() : "U");
+                      }}
                     />
                   </div>
                   <div className="ml-4">
