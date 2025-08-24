@@ -175,6 +175,15 @@ const SellerOrderTable = ({
                   {/* Actions */}
                   <td className="px-4 py-4 whitespace-nowrap text-sm font-medium w-[100px]">
                     <div className="flex space-x-2">
+                      
+                      <button
+                        onClick={() => onViewDetails(order)}
+                        className="text-green-600 hover:text-green-900 transition-colors duration-200 p-1 rounded hover:bg-green-50"
+                        title="View Details"
+                      >
+                        <IoEyeOutline size={16} />
+                      </button>
+
                       {/* Confirm Shipped Button - Only show for PAID orders */}
                       {order.status === 'PAID' && (
                         <button
@@ -185,14 +194,6 @@ const SellerOrderTable = ({
                           <IoSendOutline size={16} />
                         </button>
                       )}
-                      
-                      <button
-                        onClick={() => onViewDetails(order)}
-                        className="text-green-600 hover:text-green-900 transition-colors duration-200 p-1 rounded hover:bg-green-50"
-                        title="View Details"
-                      >
-                        <IoEyeOutline size={16} />
-                      </button>
                     </div>
                   </td>
                 </tr>

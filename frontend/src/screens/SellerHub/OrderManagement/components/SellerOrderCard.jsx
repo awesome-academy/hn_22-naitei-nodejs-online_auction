@@ -95,7 +95,13 @@ const SellerOrderCard = ({
 
       {/* Actions */}
       <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
-        {/* Confirm Shipped Button - Only show for PAID orders */}
+        <button
+          onClick={() => onViewDetails(order)}
+          className="text-green-600 hover:text-green-900 transition-colors duration-200 p-2 rounded-lg hover:bg-green-50"
+          title="View Details"
+        >
+          <IoEyeOutline size={16} />
+        </button>
         {order.status === 'PAID' && (
           <button
             onClick={() => onConfirmShipped(order)}
@@ -105,14 +111,6 @@ const SellerOrderCard = ({
             <IoSendOutline size={16} />
           </button>
         )}
-        
-        <button
-          onClick={() => onViewDetails(order)}
-          className="text-green-600 hover:text-green-900 transition-colors duration-200 p-2 rounded-lg hover:bg-green-50"
-          title="View Details"
-        >
-          <IoEyeOutline size={16} />
-        </button>
       </div>
     </div>
   );
