@@ -4,6 +4,7 @@ import { useNotification } from "@/contexts/NotificationContext.jsx";
 import { orderService } from "@/services/order.service.js";
 import { ORDER_STATUS, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from "@/constants/orderStatus.js";
 import { formatVND, formatDate } from "@/utils/format.js";
+import { getOrderProductInfo, handleImageError } from "@/utils/imageUtils.js";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Pagination } from "@/components/ui/index.js";
 import OrderDetailModal from "@/components/ui/OrderDetailModal.jsx";
@@ -282,28 +283,27 @@ const OrderListForBidder = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {orders.map((order) => (
+                  {orders.map((order) => {
+                    const productInfo = getOrderProductInfo(order);
+                    
+                    return (
                     <tr key={order.orderId} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div className="flex items-start gap-4">
                           {/* Product Image */}
                           <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
-                            {order.auction?.auctionProducts?.[0]?.product?.images?.find(img => img.isPrimary)?.imageUrl || 
-                             order.auction?.auctionProducts?.[0]?.product?.images?.[0]?.imageUrl ? (
+                            {productInfo.image ? (
                               <img 
-                                src={order.auction.auctionProducts[0].product.images.find(img => img.isPrimary)?.imageUrl || 
-                                     order.auction.auctionProducts[0].product.images[0].imageUrl} 
-                                alt={order.auction?.auctionProducts?.[0]?.product?.name || "Product"}
+                                src={productInfo.image} 
+                                alt={productInfo.name || "Product"}
                                 className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  e.target.style.display = 'none';
-                                  e.target.nextSibling.style.display = 'flex';
-                                }}
+                                onError={(e) => handleImageError(e)}
                               />
-                            ) : null}
-                            <div className="w-full h-full flex items-center justify-center text-gray-400" style={{ display: order.auction?.auctionProducts?.[0]?.product?.images?.length ? 'none' : 'flex' }}>
-                              <IoImageOutline className="w-8 h-8" />
-                            </div>
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                <IoImageOutline className="w-8 h-8" />
+                              </div>
+                            )}
                           </div>
                           
                           <div className="min-w-0 flex-1">
@@ -311,7 +311,7 @@ const OrderListForBidder = () => {
                               {order.auction?.title || "Unknown Auction"}
                             </div>
                             <div className="text-sm text-gray-600 mb-1">
-                              {order.auction?.auctionProducts?.[0]?.product?.name || "Product details unavailable"}
+                              {productInfo.name}
                             </div>
                             {order.auction?.seller?.profile?.fullName && (
                               <div className="text-xs text-gray-500">
@@ -361,14 +361,18 @@ const OrderListForBidder = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
             {/* Mobile Cards */}
             <div className="lg:hidden">
-              {orders.map((order) => (
+              {orders.map((order) => {
+                const productInfo = getOrderProductInfo(order);
+                
+                return (
                 <div key={order.orderId} className="border-b border-gray-200 p-4 last:border-b-0">
                   <div className="space-y-4">
                     <div className="flex items-start justify-between">
@@ -389,31 +393,27 @@ const OrderListForBidder = () => {
                     <div className="flex items-start gap-4">
                       {/* Product Image */}
                       <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
-                        {order.auction?.auctionProducts?.[0]?.product?.images?.find(img => img.isPrimary)?.imageUrl || 
-                         order.auction?.auctionProducts?.[0]?.product?.images?.[0]?.imageUrl ? (
+                        {productInfo.image ? (
                           <img 
-                            src={order.auction.auctionProducts[0].product.images.find(img => img.isPrimary)?.imageUrl || 
-                                 order.auction.auctionProducts[0].product.images[0].imageUrl} 
-                            alt={order.auction?.auctionProducts?.[0]?.product?.name || "Product"}
+                            src={productInfo.image} 
+                            alt={productInfo.name || "Product"}
                             className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.nextSibling.style.display = 'flex';
-                            }}
+                            onError={(e) => handleImageError(e)}
                           />
-                        ) : null}
-                        <div className="w-full h-full flex items-center justify-center text-gray-400" style={{ display: order.auction?.auctionProducts?.[0]?.product?.images?.length ? 'none' : 'flex' }}>
-                          <IoImageOutline className="w-6 h-6" />
-                        </div>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            <IoImageOutline className="w-6 h-6" />
+                          </div>
+                        )}
                       </div>
-                      
+
                       {/* Product Info */}
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium text-gray-900">
                           {order.auction?.title || "Unknown Auction"}
                         </div>
                         <div className="text-sm text-gray-600">
-                          {order.auction?.auctionProducts?.[0]?.product?.name || "Product details unavailable"}
+                          {productInfo.name}
                         </div>
                         {order.auction?.seller?.profile?.fullName && (
                           <div className="text-xs text-gray-500 mt-1">
@@ -422,7 +422,6 @@ const OrderListForBidder = () => {
                         )}
                       </div>
                     </div>
-
                     <div className="flex items-center justify-between">
                       <div className="text-lg font-semibold text-gray-900">
                         {formatVND(order.totalAmount)}
@@ -448,7 +447,8 @@ const OrderListForBidder = () => {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}

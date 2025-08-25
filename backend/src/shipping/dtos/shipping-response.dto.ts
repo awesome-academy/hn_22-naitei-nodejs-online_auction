@@ -1,4 +1,5 @@
 import { ShippingStatus } from '@common/enums/shipping-status.enum';
+import { OrderStatus } from '@common/enums/order-status.enum';
 
 export interface UserDto {
   userId: string;
@@ -27,6 +28,15 @@ export interface AuctionDto {
   product: ProductDto | null;
 }
 
+export interface OrderDto {
+  orderId: string;
+  totalAmount: number;
+  status: OrderStatus;
+  paymentDueDate: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface ShippingResponseDto {
   id: string;
   auctionId: string;
@@ -43,4 +53,5 @@ export interface ShippingResponseDto {
   seller: UserDto;
   buyer: UserDto;
   auction: AuctionDto;
+  order?: OrderDto;
 }

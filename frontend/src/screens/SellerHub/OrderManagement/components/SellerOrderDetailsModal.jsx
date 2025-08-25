@@ -1,5 +1,6 @@
 import React from "react";
 import { IoCloseOutline, IoReceiptOutline, IoPerson, IoCardOutline } from "react-icons/io5";
+import { getOrderProductInfo, handleImageError } from "@/utils/imageUtils.js";
 
 const SellerOrderDetailsModal = ({ 
   isOpen, 
@@ -11,21 +12,7 @@ const SellerOrderDetailsModal = ({
 }) => {
   if (!isOpen || !order) return null;
 
-  const getProductInfo = (order) => {
-    if (!order.auction?.product) {
-      return { name: "N/A", image: null };
-    }
-    
-    const product = order.auction.product;
-    const primaryImage = product.images?.length > 0 ? product.images[0] : null;
-    
-    return {
-      name: product.name || "N/A",
-      image: primaryImage
-    };
-  };
-
-  const productInfo = getProductInfo(order);
+  const productInfo = getOrderProductInfo(order);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -128,13 +115,22 @@ const SellerOrderDetailsModal = ({
           <div className="bg-gray-50 rounded-lg p-3">
             <h3 className="text-base font-semibold text-gray-900 mb-3">Product Information</h3>
             <div className="flex items-start gap-3">
-              <div className="h-16 w-16 flex-shrink-0">
+              <div className="h-16 w-16 flex-shrink-0 relative">
                 {productInfo.image ? (
-                  <img
-                    className="h-16 w-16 rounded-lg object-cover"
-                    src={productInfo.image}
-                    alt={productInfo.name}
-                  />
+                  <>
+                    <img
+                      className="h-16 w-16 rounded-lg object-cover"
+                      src={productInfo.image}
+                      alt={productInfo.name}
+                      onError={(e) => handleImageError(e)}
+                    />
+                    <div 
+                      className="absolute inset-0 h-16 w-16 rounded-lg bg-gray-200 flex items-center justify-center"
+                      style={{ display: 'none' }}
+                    >
+                      <span className="text-gray-400 text-xs">No Image</span>
+                    </div>
+                  </>
                 ) : (
                   <div className="h-16 w-16 rounded-lg bg-gray-200 flex items-center justify-center">
                     <span className="text-gray-400 text-xs">No Image</span>
@@ -143,7 +139,9 @@ const SellerOrderDetailsModal = ({
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-medium text-gray-900 mb-1">{productInfo.name}</h4>
-                <p className="text-xs text-gray-600">Product ID: {order.auction?.product?.productId || "N/A"}</p>
+                <p className="text-xs text-gray-600">
+                  Product ID: {order.auction?.auctionProducts?.[0]?.product?.productId || "N/A"}
+                </p>
               </div>
             </div>
           </div>

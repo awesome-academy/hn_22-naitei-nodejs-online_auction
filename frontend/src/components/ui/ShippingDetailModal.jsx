@@ -20,9 +20,11 @@ import {
   IoShieldCheckmarkOutline
 } from "react-icons/io5";
 
-const ShippingDetailModal = ({ shipping, isOpen, onClose }) => {
+const ShippingDetailModal = ({ shipping, isOpen, onClose, onConfirmDelivery }) => {
   const handleConfirmDelivery = () => {
-    alert("Confirm delivery feature will be implemented soon");
+    if (onConfirmDelivery) {
+      onConfirmDelivery(shipping);
+    }
   };
 
   if (!isOpen || !shipping) return null;
