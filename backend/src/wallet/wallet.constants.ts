@@ -1,67 +1,67 @@
 export const WALLET_CONFIG = {
-  MIN_DEPOSIT_AMOUNT: 100000, // 100,000 VND
-  MAX_DEPOSIT_AMOUNT: 1000000000, // 1,000,000,000 VND
+  MIN_DEPOSIT_AMOUNT: 100, // 100 USD
+  MAX_DEPOSIT_AMOUNT: 100000, // 100,000 USD
 };
 
 export const WALLET_ERRORS = {
   INVALID_DEPOSIT_AMOUNT: {
     statusCode: 400,
-    message: `Số tiền nạp phải từ ${WALLET_CONFIG.MIN_DEPOSIT_AMOUNT.toLocaleString('vi-VN')} đến ${WALLET_CONFIG.MAX_DEPOSIT_AMOUNT.toLocaleString('vi-VN')} VND`,
+    message: `Deposit amount must be from ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(WALLET_CONFIG.MIN_DEPOSIT_AMOUNT)} to ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(WALLET_CONFIG.MAX_DEPOSIT_AMOUNT)}`,
     errorCode: 'INVALID_DEPOSIT_AMOUNT',
   },
 
   AUCTION_NOT_FOUND: {
     statusCode: 404,
-    message: 'Không tìm thấy phiên đấu giá',
+    message: 'Auction not found',
     errorCode: 'AUCTION_NOT_FOUND',
   },
 
   AUCTION_NOT_OPEN: {
     statusCode: 400,
-    message: 'Phiên đấu giá không đang mở',
+    message: 'Auction is not open',
     errorCode: 'AUCTION_NOT_OPEN',
   },
 
   CANNOT_BID_OWN_AUCTION: {
     statusCode: 400,
-    message: 'Không thể đấu giá sản phẩm của chính mình',
+    message: 'Cannot bid on your own auction',
     errorCode: 'CANNOT_BID_OWN_AUCTION',
   },
 
   INSUFFICIENT_BALANCE: {
     statusCode: 400,
-    message: 'Số dư ví không đủ để đặt bid',
+    message: 'Insufficient wallet balance to place bid',
     errorCode: 'INSUFFICIENT_WALLET_BALANCE',
   },
 
   USER_NOT_FOUND: {
     statusCode: 404,
-    message: 'Không tìm thấy người dùng',
+    message: 'User not found',
     errorCode: 'USER_NOT_FOUND',
   },
 
   INSUFFICIENT_BALANCE_FOR_ADJUSTMENT: {
     statusCode: 400,
-    message: 'Số dư không đủ để thực hiện điều chỉnh',
+    message: 'Insufficient balance for adjustment',
     errorCode: 'INSUFFICIENT_BALANCE_FOR_ADJUSTMENT',
   },
 };
 
 export const TRANSACTION_DESCRIPTIONS = {
-  DEPOSIT: (amount: number) => `Nạp ${amount.toLocaleString('vi-VN')} VND vào ví`,
+  DEPOSIT: (amount: number) => `Deposit ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)} to wallet`,
 
   BID_PAYMENT: (amount: number, auctionTitle: string) =>
-    `Đặt bid ${amount.toLocaleString('vi-VN')} VND cho phiên đấu giá: ${auctionTitle}`,
+    `Bid ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)} for auction: ${auctionTitle}`,
 
   BID_REFUND: (amount: number, auctionTitle: string) =>
-    `Hoàn tiền bid ${amount.toLocaleString('vi-VN')} VND cho phiên đấu giá: ${auctionTitle}`,
+    `Refund bid ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)} for auction: ${auctionTitle}`,
 
   ADMIN_ADJUSTMENT: (amount: number) =>
-    `Admin ${amount > 0 ? 'cộng' : 'trừ'} ${Math.abs(amount).toLocaleString('vi-VN')} VND`,
+    `Admin ${amount > 0 ? 'added' : 'deducted'} ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Math.abs(amount))}`,
 };
 
 export const formatBidMinimumError = (minimumBid: string) =>
-  `Số tiền bid phải lớn hơn ${minimumBid} VND`;
+  `Bid amount must be greater than ${minimumBid}`;
 
 export const PAGE_DEFAULT = 1;
 

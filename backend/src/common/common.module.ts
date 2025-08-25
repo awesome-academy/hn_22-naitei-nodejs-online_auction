@@ -11,7 +11,13 @@ import { RoleGuard } from './guards/role.guard';
 import { UploadFileServiceS3 } from './services/file.service';
 import { AdminSeederService } from './services/admin-seeder.service';
 
-const service = [TokenService, PrismaService, PasswordService, UploadFileServiceS3, AdminSeederService];
+const service = [
+  TokenService,
+  PrismaService,
+  PasswordService,
+  UploadFileServiceS3,
+  AdminSeederService,
+];
 
 @Global()
 @Module({

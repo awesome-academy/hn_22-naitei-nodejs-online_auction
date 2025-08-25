@@ -20,23 +20,32 @@ import { SearchAuctionQueryDto } from './dtos/search-auction.query.dto';
 import { SearchAuctionResponseDto } from './dtos/search-auction.response.dto';
 import { Public } from '@common/decorators/public.decorator';
 import { GetAuctionDetailResponseDto } from './dtos/get-auction-detail.response.dto';
-import { ERROR_AUCTION_NOT_FOUND, MAX_AUCTIONS_NUMBERS } from './auction.constant';
+import {
+  ERROR_AUCTION_NOT_FOUND,
+  MAX_AUCTIONS_NUMBERS,
+} from './auction.constant';
 import { CurrentUser } from '@common/decorators/user.decorator';
 import { AddToWatchlistResponseDto } from './dtos/add-to-watchlist.response.dto';
 import { AddToWatchlistDto } from './dtos/add-to-watchlist.body.dto';
-import { RemoveFromWatchlistDto, RemoveFromWatchlistResponseDto } from './dtos/remove-from-watchlist.dto';
+import {
+  RemoveFromWatchlistDto,
+  RemoveFromWatchlistResponseDto,
+} from './dtos/remove-from-watchlist.dto';
 import { SortDirection } from '@common/types/sort-direction.enum';
 import { UpdateAuctionDto } from './dtos/update-auction.body.dto';
 import { AuthType } from '@common/types/auth-type.enum';
 import { Auth } from '@common/decorators/auth.decorator';
 import { CancelAuctionDto } from './dtos/cancel-auction.body.dto';
-import { ReopenAuctionBodyDto, ReopenAuctionResponseDto } from './dtos/reopen-auction.dto';
+import {
+  ReopenAuctionBodyDto,
+  ReopenAuctionResponseDto,
+} from './dtos/reopen-auction.dto';
 import { EditAuctionResponseDto } from './dtos/edit-auction.response.dto';
 import { EditAuctionBodyDto } from './dtos/edit-auction.body.dto';
 
 @Controller('auctions')
 export class AuctionController {
-  constructor(private readonly auctionService: AuctionService) { }
+  constructor(private readonly auctionService: AuctionService) {}
 
   @Post()
   @Roles(Role.SELLER)
@@ -67,7 +76,7 @@ export class AuctionController {
       page: 0,
       size: MAX_AUCTIONS_NUMBERS,
       sortField: 'createdAt',
-      sortDirection: SortDirection.DESC
+      sortDirection: SortDirection.DESC,
     } as SearchAuctionQueryDto);
   }
 
@@ -114,13 +123,15 @@ export class AuctionController {
   @Patch('cancel')
   @Roles(Role.ADMIN, Role.SELLER)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async cancelAuction(@Body() cancelAuctionDto: CancelAuctionDto): Promise<String> {
+  async cancelAuction(
+    @Body() cancelAuctionDto: CancelAuctionDto,
+  ): Promise<string> {
     return await this.auctionService.cancelAuction(cancelAuctionDto);
   }
 
   @Patch('close/:auctionId')
   @Auth(AuthType.ACCESS_TOKEN)
-  @Roles(Role.ADMIN, Role.SELLER)
+  @Roles(Role.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   async closeAuction(@Param('auctionId') auctionId: string): Promise<void> {
     await this.auctionService.closeAuction(auctionId);
@@ -141,15 +152,20 @@ export class AuctionController {
     @CurrentUser() user: any,
     @Body() removeFromWatchlistDto: RemoveFromWatchlistDto,
   ): Promise<RemoveFromWatchlistResponseDto> {
-    return this.auctionService.removeFromWatchlist(user, removeFromWatchlistDto);
+    return this.auctionService.removeFromWatchlist(
+      user,
+      removeFromWatchlistDto,
+    );
   }
 
   @Roles(Role.SELLER)
   @Patch('reopen')
-  async reopenAuction(
+  async restoreCancelledAuctionToPending(
     @Body() reopenAuctionBodyDto: ReopenAuctionBodyDto,
   ): Promise<ReopenAuctionResponseDto> {
-    return this.auctionService.reopenAuction(reopenAuctionBodyDto);
+    return this.auctionService.restoreCancelledAuctionToPending(
+      reopenAuctionBodyDto,
+    );
   }
 
   @Roles(Role.SELLER)
@@ -159,5 +175,13 @@ export class AuctionController {
     @Body() editAuctionDto: EditAuctionBodyDto,
   ): Promise<EditAuctionResponseDto> {
     return this.auctionService.editAuction(auctionId, editAuctionDto);
+  }
+
+  @Patch('reopen/:auctionId')
+  @Auth(AuthType.ACCESS_TOKEN)
+  @Roles(Role.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  async reopenAuction(@Param('auctionId') auctionId: string): Promise<void> {
+    await this.auctionService.reopenAuction(auctionId);
   }
 }

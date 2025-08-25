@@ -83,7 +83,7 @@ export class WalletService {
     return {
       userId: user.userId,
       walletBalance: user.walletBalance.toString(),
-      formattedBalance: user.walletBalance.toNumber().toLocaleString('vi-VN'),
+      formattedBalance: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(user.walletBalance.toNumber()),
     };
   }
 

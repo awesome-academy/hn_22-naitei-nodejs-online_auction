@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWallet } from '@/contexts/WalletContext';
 import { useUser } from '@/contexts/UserContext';
-import { FaWallet, FaPlus, FaHistory, FaArrowUp, FaArrowDown, FaFilter, FaDownload } from 'react-icons/fa';
+import { FaWallet, FaPlus, FaHistory, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import { Header } from '@/components/ui';
 
 const WalletDashboard = () => {
@@ -20,10 +20,9 @@ const WalletDashboard = () => {
     limit: 10
   });
 
-  // Fetch balance khi component mount
   useEffect(() => {
-      fetchBalance();
-      loadTransactions();
+    fetchBalance();
+    loadTransactions();
   }, [user]);
 
   const loadTransactions = async (page = 1, newFilter = filter) => {
@@ -57,7 +56,6 @@ const WalletDashboard = () => {
 
   const getTransactionIcon = (type, status) => {
     if (status === 'FAILED') return <FaArrowDown className="text-red-500" />;
-
     switch (type) {
       case 'DEPOSIT':
         return <FaArrowUp className="text-green-500" />;
@@ -74,11 +72,11 @@ const WalletDashboard = () => {
 
   const getTransactionTypeText = (type) => {
     const typeMap = {
-      'DEPOSIT': 'Nạp tiền',
-      'WITHDRAWAL': 'Rút tiền',
-      'BID_PAYMENT': 'Thanh toán đấu giá',
-      'BID_REFUND': 'Hoàn tiền đấu giá',
-      'ADMIN_ADJUSTMENT': 'Điều chỉnh admin'
+      'DEPOSIT': 'Deposit',
+      'WITHDRAWAL': 'Withdraw',
+      'BID_PAYMENT': 'Auction Payment',
+      'BID_REFUND': 'Auction Refund',
+      'ADMIN_ADJUSTMENT': 'Admin Adjustment'
     };
     return typeMap[type] || type;
   };
@@ -92,8 +90,10 @@ const WalletDashboard = () => {
     }
   };
 
+  const formatUSD = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString('vi-VN', {
+    return new Date(dateString).toLocaleString('en-US', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -115,14 +115,14 @@ const WalletDashboard = () => {
               <div className="flex items-center justify-between mb-4">
                 <h1 className="text-3xl font-bold text-gray-800 flex items-center">
                   <FaWallet className="mr-3 text-blue-600" />
-                  Ví của tôi
+                  My Wallet
                 </h1>
                 <button
                   onClick={() => navigate('/wallet/add-funds')}
                   className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center shadow-md"
                 >
                   <FaPlus className="mr-2" />
-                  Nạp tiền
+                  Add Funds
                 </button>
               </div>
             </div>
@@ -133,12 +133,12 @@ const WalletDashboard = () => {
               <div className="md:col-span-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl p-6 shadow-lg">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-blue-100 text-sm mb-2">Số dư hiện tại</p>
+                    <p className="text-blue-100 text-sm mb-2">Current Balance</p>
                     <p className="text-4xl font-bold mb-2">
-                      {loading ? '...' : formattedBalance || '0'} ₫
+                      {loading ? '...' : formattedBalance || formatUSD(0)}
                     </p>
                     <p className="text-blue-100 text-sm">
-                      Cập nhật lần cuối: {new Date().toLocaleString('vi-VN')}
+                      Last updated: {new Date().toLocaleString('en-US')}
                     </p>
                   </div>
                   <div className="text-6xl text-blue-300 opacity-50">
@@ -149,21 +149,21 @@ const WalletDashboard = () => {
 
               {/* Quick Actions */}
               <div className="bg-white rounded-xl p-6 shadow-md">
-                <h3 className="font-semibold text-gray-800 mb-4">Thao tác nhanh</h3>
+                <h3 className="font-semibold text-gray-800 mb-4">Quick Actions</h3>
                 <div className="space-y-3">
                   <button
                     onClick={() => navigate('/wallet/add-funds')}
                     className="w-full bg-red-500 text-black py-3 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center"
                   >
                     <FaPlus className="mr-2" />
-                    Nạp tiền
+                    Add Funds
                   </button>
                   <button
                     onClick={() => window.location.reload()}
                     className="w-full bg-gray-500 text-white py-3 rounded-lg hover:bg-gray-600 transition-colors flex items-center justify-center"
                   >
                     <FaHistory className="mr-2" />
-                    Làm mới
+                    Refresh
                   </button>
                 </div>
               </div>
@@ -176,7 +176,7 @@ const WalletDashboard = () => {
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-semibold text-gray-800 flex items-center">
                     <FaHistory className="mr-2" />
-                    Lịch sử giao dịch
+                    Transaction History
                   </h2>
                   <div className="flex items-center gap-4">
                     {/* Filter */}
@@ -185,11 +185,11 @@ const WalletDashboard = () => {
                       onChange={(e) => handleFilterChange({ type: e.target.value })}
                       className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="">Tất cả loại</option>
-                      <option value="DEPOSIT">Nạp tiền</option>
-                      <option value="WITHDRAWAL">Rút tiền</option>
-                      <option value="BID_PAYMENT">Thanh toán đấu giá</option>
-                      <option value="BID_REFUND">Hoàn tiền</option>
+                      <option value="">All Types</option>
+                      <option value="DEPOSIT">Deposit</option>
+                      <option value="WITHDRAWAL">Withdraw</option>
+                      <option value="BID_PAYMENT">Auction Payment</option>
+                      <option value="BID_REFUND">Auction Refund</option>
                     </select>
 
                     {/* Sort Order */}
@@ -198,8 +198,8 @@ const WalletDashboard = () => {
                       onChange={(e) => handleFilterChange({ sortOrder: e.target.value })}
                       className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="DESC">Mới nhất</option>
-                      <option value="ASC">Cũ nhất</option>
+                      <option value="DESC">Newest</option>
+                      <option value="ASC">Oldest</option>
                     </select>
 
                     {/* Limit */}
@@ -208,9 +208,9 @@ const WalletDashboard = () => {
                       onChange={(e) => handleFilterChange({ limit: parseInt(e.target.value) })}
                       className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value={10}>10 / trang</option>
-                      <option value={20}>20 / trang</option>
-                      <option value={50}>50 / trang</option>
+                      <option value={10}>10 / page</option>
+                      <option value={20}>20 / page</option>
+                      <option value={50}>50 / page</option>
                     </select>
                   </div>
                 </div>
@@ -221,12 +221,12 @@ const WalletDashboard = () => {
                 {isLoadingTransactions ? (
                   <div className="p-8 text-center">
                     <div className="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <p className="mt-2 text-gray-500">Đang tải giao dịch...</p>
+                    <p className="mt-2 text-gray-500">Loading transactions...</p>
                   </div>
                 ) : transactions.length === 0 ? (
                   <div className="p-8 text-center">
                     <FaHistory className="mx-auto text-4xl text-gray-300 mb-4" />
-                    <p className="text-gray-500">Chưa có giao dịch nào</p>
+                    <p className="text-gray-500">No transactions yet</p>
                   </div>
                 ) : (
                   transactions.map((transaction) => (
@@ -250,7 +250,7 @@ const WalletDashboard = () => {
                             )}
                             {transaction.auction && (
                               <p className="text-sm text-blue-600 mt-1">
-                                Đấu giá: {transaction.auction.title}
+                                Auction: {transaction.auction.title}
                               </p>
                             )}
                           </div>
@@ -262,16 +262,16 @@ const WalletDashboard = () => {
                               : 'text-red-600'
                           }`}>
                             {transaction.type === 'DEPOSIT' || transaction.type === 'BID_REFUND' ? '+' : '-'}
-                            {parseInt(transaction.amount).toLocaleString('vi-VN')} ₫
+                            {formatUSD(Number(transaction.amount))}
                           </p>
                           <div className="flex items-center justify-end mt-1 gap-2">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(transaction.status)}`}>
-                              {transaction.status === 'SUCCESS' ? 'Thành công' :
-                               transaction.status === 'PENDING' ? 'Đang xử lý' : 'Thất bại'}
+                              {transaction.status === 'SUCCESS' ? 'Success' :
+                               transaction.status === 'PENDING' ? 'Pending' : 'Failed'}
                             </span>
                           </div>
                           <p className="text-sm text-gray-500 mt-1">
-                            Số dư: {parseInt(transaction.balanceAfter).toLocaleString('vi-VN')} ₫
+                            Balance: {formatUSD(Number(transaction.balanceAfter))}
                           </p>
                         </div>
                       </div>
@@ -285,8 +285,8 @@ const WalletDashboard = () => {
                 <div className="bg-gray-50 px-6 py-4 border-t">
                   <div className="flex items-center justify-between">
                     <p className="text-sm text-gray-700">
-                      Hiển thị {((currentPage - 1) * filter.limit) + 1} - {Math.min(currentPage * filter.limit, totalTransactions)}
-                      trong tổng số {totalTransactions} giao dịch
+                      Showing {((currentPage - 1) * filter.limit) + 1} - {Math.min(currentPage * filter.limit, totalTransactions)}
+                      of {totalTransactions} transactions
                     </p>
                     <div className="flex items-center gap-2">
                       <button
@@ -294,7 +294,7 @@ const WalletDashboard = () => {
                         disabled={currentPage === 1}
                         className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Trước
+                        Previous
                       </button>
 
                       {[...Array(Math.min(5, totalPages))].map((_, index) => {
@@ -329,7 +329,7 @@ const WalletDashboard = () => {
                         disabled={currentPage === totalPages}
                         className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Sau
+                        Next
                       </button>
                     </div>
                   </div>
