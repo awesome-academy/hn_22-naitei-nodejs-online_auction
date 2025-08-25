@@ -34,8 +34,8 @@ const AddFunds = () => {
       return;
     }
 
-    if (parseInt(amount) > 10000) {
-      alert('Maximum amount is $10,000.00');
+    if (parseInt(amount) > 100000) {
+      alert('Maximum amount is $100,000.00');
       return;
     }
 
@@ -325,7 +325,7 @@ const AddFunds = () => {
                 <span className="absolute right-3 top-3 text-gray-500 font-medium">$</span>
               </div>
               <p className="text-sm text-gray-500 mt-1">
-                Minimum: {formatUSD(10)} - Maximum: {formatUSD(10000)}
+                Minimum: {formatUSD(10)} - Maximum: {formatUSD(100000)}
               </p>
             </div>
 

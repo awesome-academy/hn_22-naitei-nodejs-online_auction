@@ -24,7 +24,7 @@ import { Auction } from '@prisma/client';
 
 @Injectable()
 export class BidService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async countBidsByAuction(auctionId: string): Promise<number> {
     const auction = await this.prisma.auction.findUnique({
@@ -251,6 +251,15 @@ export class BidService {
           isHidden: isLast10Minutes,
         },
         include: { user: { include: { profile: true } } },
+      });
+
+      await prisma.auction.update({
+        where: { auctionId: dto.auctionId },
+        data: {
+          currentPrice: dto.bidAmount,
+          bidCount: { increment: 1 },
+          lastBidTime: new Date(),
+        },
       });
 
       // d) Create wallet transaction

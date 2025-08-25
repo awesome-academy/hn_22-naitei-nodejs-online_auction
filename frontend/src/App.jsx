@@ -14,6 +14,7 @@ import ChatPage from '@/screens/chat/index.jsx';
 import AddFunds from '@/screens/wallet/AddFunds-QR';
 import WalletDashboard from '@/screens/wallet/WalletDashboard';
 import { WalletProvider } from './contexts/WalletContext';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
       <UserProvider>
         <NotificationProvider>
           <WalletProvider>
+            <Toaster position="top-right" />
             <Routes>
               <Route path="/" element={<Navigate to="/auth/login" replace />} />
               <Route path="/auth/*" element={<AuthRoute />} />
@@ -40,7 +42,7 @@ function App() {
         </NotificationProvider>
       </UserProvider>
     </BrowserRouter>
-  )
+  );
 }
 
 export default App;
