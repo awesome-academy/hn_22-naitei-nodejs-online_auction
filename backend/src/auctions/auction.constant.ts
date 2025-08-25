@@ -16,6 +16,18 @@ export const ERROR_PRODUCT_STOCK_INSUFFICIENT = (productId: string) => ({
   errorCode: 'INSUFFICIENT_PRODUCT_STOCK',
 });
 
+export const ERROR_AUCTION_NOT_CLOSED = {
+  statusCode: 400,
+  message: 'Only closed auctions can be reopened',
+  errorCode: 'AUCTION_NOT_CLOSED',
+};
+
+export const ERROR_AUCTION_CANNOT_OPEN_AFTER_ENDTIME = {
+  statusCode: 400,
+  message: 'Auction cannot be reopened after end time',
+  errorCode: 'AUCTION_CANNOT_OPEN_AFTER_ENDTIME',
+};
+
 export const ERROR_AUCTION_START_TIME_IN_PAST = (minDate: Date) => ({
   statusCode: 400,
   message: `Start time must be in the future (>= ${minDate.toString()})`,
