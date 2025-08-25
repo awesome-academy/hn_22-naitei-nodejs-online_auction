@@ -3,9 +3,12 @@ import {
   InternalServerErrorException,
   BadRequestException,
   Logger,
+  NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import PrismaService from '@common/services/prisma.service';
 import { ShippingStatus } from '@common/enums/shipping-status.enum';
+import { OrderStatus } from '@common/enums/order-status.enum';
 import { Prisma } from '@prisma/client';
 import {
   GetBidderShippingsQueryDto,
@@ -16,10 +19,12 @@ import { GetSellerShippingsQueryDto } from './dtos/get-seller-shippings-query.dt
 import { ShippingResponseDto } from './dtos/shipping-response.dto';
 import { GetBidderShippingsResponseDto } from './dtos/get-bidder-shippings-response.dto';
 import { GetSellerShippingsResponseDto } from './dtos/get-seller-shippings-response.dto';
+import { ConfirmDeliveryResponseDto } from './dtos/confirm-delivery-response.dto';
 import {
   DEFAULT_PAGE,
   DEFAULT_LIMIT,
   SHIPPING_ERRORS,
+  SHIPPING_MESSAGES,
   VALIDATION_RULES,
   MAX_LIMIT,
   MIN_PAGE,
@@ -497,5 +502,103 @@ export class ShippingService {
       hasNextPage,
       hasPreviousPage,
     };
+  }
+
+  async confirmDelivery(
+    shippingId: string,
+    buyerId: string,
+  ): Promise<ConfirmDeliveryResponseDto> {
+    try {
+      const shipping = await this.prisma.shipping.findUnique({
+        where: { id: shippingId },
+        include: {
+          auction: {
+            include: {
+              orders: true,
+            },
+          },
+        },
+      });
+
+      if (!shipping) {
+        throw new NotFoundException(SHIPPING_ERRORS.DELIVERY_NOT_FOUND);
+      }
+
+      if (shipping.buyerId !== buyerId) {
+        throw new ForbiddenException(SHIPPING_ERRORS.DELIVERY_ACCESS_DENIED);
+      }
+
+      if (shipping.shippingStatus !== ShippingStatus.IN_TRANSIT) {
+        throw new BadRequestException(SHIPPING_ERRORS.DELIVERY_INVALID_STATUS);
+      }
+
+      const now = new Date();
+
+      const [updatedShipping] = await this.prisma.$transaction([
+        this.prisma.shipping.update({
+          where: { id: shippingId },
+          data: {
+            shippingStatus: ShippingStatus.DELIVERED,
+            actualDelivery: now,
+            updatedAt: now,
+          },
+        }),
+        ...(shipping.auction.orders.length > 0
+          ? [
+              this.prisma.order.updateMany({
+                where: {
+                  auctionId: shipping.auctionId,
+                  userId: buyerId,
+                },
+                data: {
+                  status: OrderStatus.COMPLETED,
+                  updatedAt: now,
+                },
+              }),
+            ]
+          : []),
+      ]);
+
+      this.logger.log(
+        `Delivery confirmed for shipping ${shippingId} by user ${buyerId}`,
+      );
+
+      return {
+        message: SHIPPING_MESSAGES.DELIVERY_CONFIRMED,
+        shippingInfo: {
+          id: updatedShipping.id,
+          auctionId: updatedShipping.auctionId,
+          shippingStatus: ShippingStatus.DELIVERED,
+          actualDelivery: updatedShipping.actualDelivery,
+          updatedAt: updatedShipping.updatedAt,
+        },
+        orderInfo: {
+          status: OrderStatus.COMPLETED,
+          completedAt: now,
+        },
+        auctionInfo: {
+          id: shipping.auction.auctionId,
+          title: shipping.auction.title,
+          winningBid: Number(shipping.auction.currentPrice),
+        },
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to confirm delivery for shipping ${shippingId}`,
+        error,
+      );
+
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        SHIPPING_ERRORS.DELIVERY_CONFIRMATION_FAILED,
+      );
+    }
   }
 }

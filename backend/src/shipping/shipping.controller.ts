@@ -1,4 +1,11 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import JwtAuthGuard from '@common/guards/jwt.guard';
 import { RoleGuard } from '@common/guards/role.guard';
 import { Roles } from '@common/decorators/roles.decorator';
@@ -10,6 +17,7 @@ import { GetBidderShippingsQueryDto } from './dtos/get-bidder-shippings-query.dt
 import { GetBidderShippingsResponseDto } from './dtos/get-bidder-shippings-response.dto';
 import { GetSellerShippingsQueryDto } from './dtos/get-seller-shippings-query.dto';
 import { GetSellerShippingsResponseDto } from './dtos/get-seller-shippings-response.dto';
+import { ConfirmDeliveryResponseDto } from './dtos/confirm-delivery-response.dto';
 
 @Controller('shipping')
 @UseGuards(JwtAuthGuard, RoleGuard)
@@ -32,5 +40,14 @@ export class ShippingController {
     @CurrentUser() user: TokenPayload,
   ): Promise<GetSellerShippingsResponseDto> {
     return this.shippingService.getSellerShippings(user.id, query);
+  }
+
+  @Patch(':shippingId/confirm-delivery')
+  @Roles(Role.BIDDER)
+  async confirmDelivery(
+    @Param('shippingId') shippingId: string,
+    @CurrentUser() user: TokenPayload,
+  ): Promise<ConfirmDeliveryResponseDto> {
+    return this.shippingService.confirmDelivery(shippingId, user.id);
   }
 }
