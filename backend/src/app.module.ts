@@ -21,7 +21,7 @@ import { ShippingModule } from './shipping/shipping.module';
 import { StatisticsModule } from './statistics/statistics.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CommentsModule } from './comments/comments.module';
-
+import { AuctionCommentsModule } from './comments-auction/auction-comments.module';
 
 @Module({
   imports: [
@@ -61,6 +61,7 @@ import { CommentsModule } from './comments/comments.module';
     NotificationModule,
     OrdersModule,
     CommentsModule,
+    AuctionCommentsModule,
     ShippingModule,
     StatisticsModule,
   ],
