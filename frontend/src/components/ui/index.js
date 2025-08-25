@@ -25,6 +25,9 @@ export { StarRating } from "./StarRating";
 export { CommentItem } from "./CommentItem";
 export { CommentForm } from "./CommentForm";
 export { RatingSummary } from "./RatingSummary";
+export { AuctionCommentForm } from "./AuctionCommentForm";
+export { AuctionCommentItem } from "./AuctionCommentItem";
+export { AuctionCommentSection } from "./AuctionCommentSection";
 
 export const commonClassNameOfInput =
   "w-full p-4 text-sm text-gray-900 border border-gray-200 focus:ring-green focus:border-green outline-none";
