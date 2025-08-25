@@ -67,11 +67,32 @@ export const SHIPPING_ERRORS = {
     message: 'Invalid sort field provided',
     errorCode: 'SHIPPING_INVALID_SORT_FIELD',
   },
+  DELIVERY_NOT_FOUND: {
+    statusCode: 404,
+    message: 'Shipping record not found',
+    errorCode: 'DELIVERY_NOT_FOUND',
+  },
+  DELIVERY_ACCESS_DENIED: {
+    statusCode: 403,
+    message: 'You are not authorized to confirm this delivery',
+    errorCode: 'DELIVERY_ACCESS_DENIED',
+  },
+  DELIVERY_INVALID_STATUS: {
+    statusCode: 400,
+    message: 'Can only confirm delivery for shipments in transit',
+    errorCode: 'DELIVERY_INVALID_STATUS',
+  },
+  DELIVERY_CONFIRMATION_FAILED: {
+    statusCode: 500,
+    message: 'Failed to confirm delivery. Please try again later.',
+    errorCode: 'DELIVERY_CONFIRMATION_FAILED',
+  },
 } as const;
 
 export const SHIPPING_MESSAGES = {
   FETCH_SUCCESS: 'Shipping records retrieved successfully',
   NO_RECORDS_FOUND: 'No shipping records found for the given criteria',
+  DELIVERY_CONFIRMED: 'Delivery confirmed successfully',
 } as const;
 
 export const VALIDATION_RULES = {

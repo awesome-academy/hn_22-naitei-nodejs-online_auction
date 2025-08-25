@@ -3,6 +3,7 @@ import axiosClient from "@/utils/axios.js";
 const SHIPPING_API = {
   GET_BIDDER_SHIPPINGS: '/api/shipping/bidder',
   GET_SELLER_SHIPPINGS: '/api/shipping/seller',
+  CONFIRM_DELIVERY: (shippingId) => `/api/shipping/${shippingId}/confirm-delivery`,
 };
 
 const transformSortByValue = (sortBy) => {
@@ -70,6 +71,20 @@ export const shippingService = {
       return response.data;
     } catch (err) {
       return handleShippingError(err);
+    }
+  },
+
+  confirmDelivery: async (shippingId) => {
+    try {
+      const response = await axiosClient.patch(SHIPPING_API.CONFIRM_DELIVERY(shippingId));
+      return response.data;
+    } catch (err) {
+      const { statusCode, message, errorCode } = err?.response?.data || {};
+      return Promise.reject({
+        statusCode: statusCode || err?.response?.status || 500,
+        message: message || 'Failed to confirm delivery',
+        errorCode: errorCode || 'CONFIRM_DELIVERY_ERROR',
+      });
     }
   },
 };
