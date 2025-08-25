@@ -56,9 +56,10 @@ model User {
 
   watchlist Watchlist[] @relation("User_Has_Watchlist")
 
-  notifications Notification[] @relation("UserNotifications")
-  orders        Order[]        @relation("User_Has_Orders")
+  notifications   Notification[]   @relation("UserNotifications")
+  orders          Order[]          @relation("User_Has_Orders")
   productComments ProductComment[] @relation("User_Has_ProductComments")
+  auctionComments AuctionComment[] @relation("User_Has_AuctionComments")
 
   sellerShippings Shipping[] @relation("Seller_Ships_Orders")
   buyerShippings  Shipping[] @relation("Buyer_Receives_Shipments")
@@ -309,6 +310,8 @@ model Auction {
 
   shippings Shipping[] @relation("Auction_Has_Shipping")
 
+  comments AuctionComment[] @relation("Auction_Has_Comments")
+
   @@map("auctions")
 }
 
@@ -457,7 +460,6 @@ model Notification {
   metadata  Json?    @db.Json
 
   @@map("notifications")
-
 }
 
 model ProductComment {
@@ -476,6 +478,23 @@ model ProductComment {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
 
   @@map("product_comments")
+}
+
+model AuctionComment {
+  commentId String @id @default(uuid()) @map("comment_id") @db.Char(36)
+
+  auctionId String  @map("auction_id") @db.Char(36)
+  auction   Auction @relation("Auction_Has_Comments", fields: [auctionId], references: [auctionId], onDelete: Cascade)
+
+  userId String @map("user_id") @db.Char(36)
+  user   User   @relation("User_Has_AuctionComments", fields: [userId], references: [userId], onDelete: Cascade)
+
+  content String @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@map("auction_comments")
 }
 
 model Order {

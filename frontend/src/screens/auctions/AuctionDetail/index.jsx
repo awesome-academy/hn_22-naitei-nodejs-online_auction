@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout.jsx";
-import { Container, Title, Caption, PrimaryButton, LoadingSpinner } from "@/components/ui/index.js";
+import { Container, Title, Caption, PrimaryButton, LoadingSpinner, AuctionCommentSection } from "@/components/ui/index.js";
 import { auctionService } from "@/services/auction.service.js";
 import { useUser } from "@/contexts/UserContext.jsx";
 import { useNotification } from "@/contexts/NotificationContext.jsx";
@@ -280,6 +280,11 @@ const AuctionDetail = () => {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Comment Section */}
+        <div className="mt-6">
+          <AuctionCommentSection auctionId={auctionId} />
         </div>
       </Container>
     </Layout>
