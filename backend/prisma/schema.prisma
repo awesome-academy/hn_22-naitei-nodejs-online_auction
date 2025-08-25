@@ -56,8 +56,8 @@ model User {
 
   watchlist Watchlist[] @relation("User_Has_Watchlist")
 
-  notifications Notification[] @relation("UserNotifications")
-  orders        Order[]        @relation("User_Has_Orders")
+  notifications   Notification[]   @relation("UserNotifications")
+  orders          Order[]          @relation("User_Has_Orders")
   productComments ProductComment[] @relation("User_Has_ProductComments")
 
   sellerShippings Shipping[] @relation("Seller_Ships_Orders")
@@ -272,6 +272,7 @@ enum AuctionStatus {
   CANCELED
   COMPLETED
   EXTENDED
+  REFUND
 }
 
 model Auction {
@@ -457,7 +458,6 @@ model Notification {
   metadata  Json?    @db.Json
 
   @@map("notifications")
-
 }
 
 model ProductComment {

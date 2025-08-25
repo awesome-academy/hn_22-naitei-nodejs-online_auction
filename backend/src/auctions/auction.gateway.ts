@@ -285,6 +285,7 @@ export class AuctionGateway
     }
   }
 
+  // --- Sự kiện đặt bid ---
   @SubscribeMessage(WS_EVENTS.PLACE_BID)
   @UseGuards(WsJwtGuard)
   async handlePlaceBid(
@@ -351,7 +352,7 @@ export class AuctionGateway
     }
   }
 
-  // --- Sự kiện kết thúc auction (dành cho admin hoặc tự động) ---
+  // --- Sự kiện kết thúc auction  ---
   @SubscribeMessage(WS_EVENTS.AUCTION_ENDED)
   @UseGuards(WsJwtGuard)
   async handleEndAuction(

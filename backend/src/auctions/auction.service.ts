@@ -7,8 +7,10 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import {
+  ERROR_AUCTION_CANNOT_OPEN_AFTER_ENDTIME,
   ERROR_AUCTION_NOT_CANCELLABLE,
   ERROR_AUCTION_NOT_CLOSABLE,
+  ERROR_AUCTION_NOT_CLOSED,
   ERROR_AUCTION_NOT_FOUND,
   ERROR_AUCTION_NOT_PENDING,
   ERROR_AUCTION_NOT_SELLER,
@@ -63,17 +65,18 @@ export class AuctionService {
       include: { user: { include: { profile: true } } },
     });
 
+    // auction hết hạn mà không có bid → CLOSED
     if (allBids.length === 0) {
       await this.prisma.auction.update({
         where: { auctionId },
-        data: { status: 'COMPLETED' },
+        data: { status: AuctionStatus.CLOSED },
       });
 
       return null;
     }
 
+    // Chọn winner từ các bid hợp lệ
     let winnerBid = allBids[0];
-
     for (let i = 1; i < allBids.length; i++) {
       const b = allBids[i];
       if (b.userId !== winnerBid.userId && b.bidAmount !== winnerBid.bidAmount)
@@ -81,10 +84,11 @@ export class AuctionService {
       if (b.userId === winnerBid.userId) winnerBid = b;
     }
 
+    // Timeout hết hạn có bid hợp lệ → chọn winner → COMPLETED
     await this.prisma.auction.update({
       where: { auctionId },
       data: {
-        status: 'COMPLETED',
+        status: AuctionStatus.COMPLETED,
         winnerId: winnerBid.userId,
       },
     });
@@ -359,6 +363,7 @@ export class AuctionService {
       ),
     };
   }
+
   async confirmAuction(auctionId: string): Promise<void> {
     const auction = await this.prisma.auction.findUnique({
       where: { auctionId },
@@ -373,6 +378,10 @@ export class AuctionService {
     }
 
     const now = new Date();
+    if (now > auction.endTime) {
+      throw new BadRequestException(ERROR_AUCTION_CANNOT_OPEN_AFTER_ENDTIME);
+    }
+
     const newStatus =
       now < auction.startTime ? AuctionStatus.READY : AuctionStatus.OPEN;
 
@@ -411,6 +420,7 @@ export class AuctionService {
   async closeAuction(auctionId: string): Promise<void> {
     const auction = await this.prisma.auction.findUnique({
       where: { auctionId },
+      include: { bids: { include: { walletTransaction: true, user: true } } },
     });
 
     if (!auction) {
@@ -424,11 +434,66 @@ export class AuctionService {
       throw new BadRequestException(ERROR_AUCTION_NOT_CLOSABLE);
     }
 
-    await this.prisma.auction.update({
-      where: { auctionId },
-      data: {
-        status: AuctionStatus.CLOSED,
-      },
+    const now = new Date();
+    const isTimeout = auction.endTime <= now;
+
+    if (isTimeout) {
+      throw new BadRequestException(ERROR_AUCTION_NOT_CLOSABLE);
+    }
+
+    // Lọc bid public VALID
+    const publicBids = auction.bids
+      .filter((b) => b.status === 'VALID' && !b.isHidden)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    // Bid public cuối cùng (mới nhất)
+    const lastPublicBid = publicBids[0];
+
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Close auction + update fields
+      await tx.auction.update({
+        where: { auctionId },
+        data: {
+          status: AuctionStatus.CLOSED,
+          currentPrice: auction.startingPrice,
+          bidCount: 0,
+        },
+      });
+
+      // 2. Refund bid cuối cùng nếu có
+      if (lastPublicBid?.walletTransaction) {
+        const bidTx = lastPublicBid.walletTransaction;
+        const userId = lastPublicBid.userId;
+        const refundAmount = bidTx.amount;
+
+        // a. Cập nhật balance user
+        const user = lastPublicBid.user;
+        const newBalance = user.walletBalance.plus(refundAmount);
+
+        await tx.user.update({
+          where: { userId },
+          data: { walletBalance: newBalance },
+        });
+
+        // b. Tạo transaction refund mới
+        await tx.walletTransaction.create({
+          data: {
+            userId,
+            type: 'BID_REFUND',
+            status: 'SUCCESS',
+            amount: refundAmount,
+            balanceAfter: newBalance,
+            auctionId,
+            bidId: lastPublicBid.bidId,
+            description: 'Refund for manual auction close',
+          },
+        });
+      }
+
+      // 3. Xóa tất cả bid
+      await tx.bid.deleteMany({
+        where: { auctionId },
+      });
     });
   }
 
@@ -679,7 +744,7 @@ export class AuctionService {
     };
   }
 
-  async reopenAuction(
+  async restoreCancelledAuctionToPending(
     reopenAuctionBodyDto: ReopenAuctionBodyDto,
   ): Promise<ReopenAuctionResponseDto> {
     const { auctionId } = reopenAuctionBodyDto;
@@ -849,5 +914,32 @@ export class AuctionService {
       auctionId: result.auctionId,
       message: 'Auction updated successfully, waiting for admin approval',
     };
+  }
+
+  async reopenAuction(auctionId: string): Promise<void> {
+    const auction = await this.prisma.auction.findUnique({
+      where: { auctionId },
+    });
+
+    if (!auction) {
+      throw new NotFoundException(ERROR_AUCTION_NOT_FOUND);
+    }
+
+    if (auction.status !== 'CLOSED') {
+      throw new BadRequestException(ERROR_AUCTION_NOT_CLOSED);
+    }
+
+    const now = new Date();
+    if (now > auction.endTime) {
+      throw new BadRequestException(ERROR_AUCTION_CANNOT_OPEN_AFTER_ENDTIME);
+    }
+
+    await this.prisma.auction.update({
+      where: { auctionId },
+      data: {
+        status: 'OPEN',
+        updatedAt: new Date(),
+      },
+    });
   }
 }

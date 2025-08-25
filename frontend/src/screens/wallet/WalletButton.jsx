@@ -27,12 +27,13 @@ export const WalletButton = ({ isHomePage }) => {
       <div
         onClick={handleViewWallet}
         className={`flex items-center ${bgColor} ${textColor} px-3 py-2 rounded-lg cursor-pointer transition-all shadow-sm hover:scale-105`}
+        title="View Wallet"
       >
         <FaWallet className="w-4 h-4 mr-2" />
         <div className="flex flex-col">
-          <span className="text-xs opacity-80">Số dư</span>
+          <span className="text-xs opacity-80">Balance</span>
           <span className="font-semibold text-sm">
-            {loading ? '...' : `${formattedBalance || '0'} ₫`}
+            {loading ? '...' : `${formattedBalance || '$0.00'}`}
           </span>
         </div>
       </div>
@@ -41,10 +42,10 @@ export const WalletButton = ({ isHomePage }) => {
       <button
         onClick={handleAddFunds}
         className={`flex items-center ${buttonBg} text-white px-3 py-2 rounded-lg transition-colors shadow-sm hover:scale-105`}
-        title="Nạp tiền"
+        title="Add Funds"
       >
         <FaPlus className="w-4 h-4 mr-1" />
-        <span className="font-medium text-sm">Nạp tiền</span>
+        <span className="font-medium text-sm">Add Funds</span>
       </button>
     </div>
   );
