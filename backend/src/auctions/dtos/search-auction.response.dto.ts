@@ -9,6 +9,8 @@ export class AuctionItemDto {
   currentPrice!: string;
   minimumBidIncrement!: string;
   status!: AuctionStatus;
+  sellerName!: string;
+  sellerEmail!: string;
 }
 
 export class SearchAuctionResponseDto {

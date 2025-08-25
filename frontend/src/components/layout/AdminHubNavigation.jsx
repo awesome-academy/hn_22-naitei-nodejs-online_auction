@@ -6,13 +6,14 @@ export const AdminHubNavigation = () => {
   const navTabs = [
     { id: 1, path: "/admin-hub/overview", label: "Overview" },
     { id: 2, path: "/admin-hub/orders", label: "Orders" },
-    { id: 3, path: "/admin-hub/listings", label: "Listings" },
-    { id: 4, path: "/admin-hub/user", label: "User" },
-    { id: 5, path: "/admin-hub/store", label: "Store" },
-    { id: 6, path: "/admin-hub/performance", label: "Performance" },
-    { id: 7, path: "/admin-hub/payments", label: "Payments" },
-    { id: 8, path: "/admin-hub/research", label: "Research" },
-    { id: 9, path: "/admin-hub/reports", label: "Reports" },
+    { id: 3, path: "/admin-hub/auctions", label: "Auctions" },
+    { id: 4, path: "/admin-hub/listings", label: "Listings" },
+    { id: 5, path: "/admin-hub/user", label: "User" },
+    { id: 6, path: "/admin-hub/store", label: "Store" },
+    { id: 7, path: "/admin-hub/performance", label: "Performance" },
+    { id: 8, path: "/admin-hub/payments", label: "Payments" },
+    { id: 9, path: "/admin-hub/research", label: "Research" },
+    { id: 10, path: "/admin-hub/reports", label: "Reports" },
   ];
 
   return (
@@ -32,10 +33,9 @@ export const AdminHubNavigation = () => {
               key={tab.id}
               to={tab.path}
               className={({ isActive }) =>
-                `text-sm font-medium transition-colors duration-200 pb-2 border-b-2 ${
-                  isActive
-                    ? "text-gray-900 border-gray-900"
-                    : "text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300"
+                `text-sm font-medium transition-colors duration-200 pb-2 border-b-2 ${isActive
+                  ? "text-gray-900 border-gray-900"
+                  : "text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300"
                 }`
               }
             >
