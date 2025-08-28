@@ -17,13 +17,13 @@ export default function WinnerPopup({isOpen, onClose, price}) {
         </p>
         <div className="flex justify-end gap-3">
           <button
-            className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+            className="px-4 py-2 rounded bg-red-500 text-white hover:bg-red-700"
             onClick={onClose}
           >
             Close
           </button>
           <button
-            className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
+            className="px-4 py-2 rounded bg-emerald-500 text-white hover:bg-emerald-700"
             onClick={() => navigate(`/profile?tab=Order`)}
           >
             Proceed to Order
