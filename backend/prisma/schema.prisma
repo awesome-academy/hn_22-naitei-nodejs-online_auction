@@ -19,16 +19,16 @@ enum Role {
 }
 
 model User {
-  userId            String   @id @default(uuid()) @map("user_id") @db.Char(36)
-  email             String   @unique @db.VarChar(255)
-  password          String   @db.VarChar(255)
-  role              Role
-  isBanned          Boolean  @default(false) @map("is_banned")
-  isVerified        Boolean  @default(false) @map("is_verified")
-  verificationToken String?  @map("verification_token") @db.VarChar(255)
+  userId                     String    @id @default(uuid()) @map("user_id") @db.Char(36)
+  email                      String    @unique @db.VarChar(255)
+  password                   String    @db.VarChar(255)
+  role                       Role
+  isBanned                   Boolean   @default(false) @map("is_banned")
+  isVerified                 Boolean   @default(false) @map("is_verified")
+  verificationToken          String?   @map("verification_token") @db.VarChar(255)
   verificationTokenExpiresAt DateTime? @map("verification_token_expires_at") @db.Timestamp(0)
-  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamp(0)
-  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+  createdAt                  DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt                  DateTime  @updatedAt @map("updated_at") @db.Timestamp(0)
 
   warnings      Warning[] @relation("UserWarnings")
   adminWarnings Warning[] @relation("AdminWarnings")
@@ -285,9 +285,9 @@ enum AuctionStatus {
 model Auction {
   auctionId String @id @default(uuid()) @map("auction_id") @db.Char(36)
   title     String @db.VarChar(255)
-  imageUrl  String   @map("image_url") @db.VarChar(255)
-  sellerId String @map("seller_id") @db.Char(36)
-  seller   User   @relation("Seller_Creates_Auctions", fields: [sellerId], references: [userId], onDelete: Cascade)
+  imageUrl  String @map("image_url") @db.VarChar(255)
+  sellerId  String @map("seller_id") @db.Char(36)
+  seller    User   @relation("Seller_Creates_Auctions", fields: [sellerId], references: [userId], onDelete: Cascade)
 
   auctionProducts AuctionProduct[] @relation("Auction_Has_Products")
 
@@ -570,6 +570,8 @@ model Order {
 
   shipping Shipping? @relation("Order_Has_Shipping")
 
+  // Ensure one order per user per auction
+  @@unique([userId, auctionId])
   @@map("orders")
 }
 

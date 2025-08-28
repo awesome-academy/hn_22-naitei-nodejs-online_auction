@@ -37,75 +37,96 @@ export class OrdersService {
     finalPrice: number,
   ): Promise<{ orderId: string }> {
     try {
-      // Get auction details to validate
-      const auction = await this.prisma.auction.findUnique({
-        where: { auctionId },
-        include: {
-          auctionProducts: {
+      // Use transaction with retry mechanism to handle race conditions
+      const result = await this.prisma.$transaction(
+        async (tx) => {
+          // Get auction details to validate within transaction
+          const auction = await tx.auction.findUnique({
+            where: { auctionId },
             include: {
-              product: true,
+              auctionProducts: {
+                include: {
+                  product: true,
+                },
+              },
             },
-          },
+          });
+
+          if (!auction) {
+            throw new NotFoundException('Auction not found');
+          }
+
+          if (auction.status !== AuctionStatus.COMPLETED) {
+            throw new BadRequestException('Auction must be completed to create order');
+          }
+
+          if (auction.winnerId !== winnerId) {
+            throw new BadRequestException('Only the auction winner can have an order created');
+          }
+
+          // Check if order already exists within transaction
+          const existingOrder = await tx.order.findFirst({
+            where: {
+              auctionId,
+              userId: winnerId,
+            },
+          });
+
+          if (existingOrder) {
+            return { orderId: existingOrder.orderId };
+          }
+
+          // Calculate payment due date (7 days from now)
+          const paymentDueDate = new Date();
+          paymentDueDate.setDate(paymentDueDate.getDate() + 7);
+
+          // Create the order
+          const order = await tx.order.create({
+            data: {
+              userId: winnerId,
+              auctionId,
+              totalAmount: finalPrice,
+              status: OrderStatus.PAID,
+              paymentDueDate,
+            },
+          });
+
+          // Create shipping record
+          await tx.shipping.create({
+            data: {
+              orderId: order.orderId,
+              auctionId,
+              sellerId: auction.sellerId,
+              buyerId: winnerId,
+              shippingStatus: ShippingStatus.PENDING,
+            },
+          });
+
+          return { orderId: order.orderId };
         },
-      });
+        {
+          maxWait: 5000, // 5 seconds
+          timeout: 10000, // 10 seconds
+        }
+      );
 
-      if (!auction) {
-        throw new NotFoundException('Auction not found');
-      }
-
-      if (auction.status !== AuctionStatus.COMPLETED) {
-        throw new BadRequestException('Auction must be completed to create order');
-      }
-
-      if (auction.winnerId !== winnerId) {
-        throw new BadRequestException('Only the auction winner can have an order created');
-      }
-
-      // Check if order already exists
-      const existingOrder = await this.prisma.order.findFirst({
-        where: {
-          auctionId,
-          userId: winnerId,
-        },
-      });
-
-      if (existingOrder) {
-        return { orderId: existingOrder.orderId };
-      }
-
-      // Calculate payment due date (7 days from now)
-      const paymentDueDate = new Date();
-      paymentDueDate.setDate(paymentDueDate.getDate() + 7);
-
-      // Create order and shipping in a transaction
-      const result = await this.prisma.$transaction(async (tx) => {
-        // Create the order
-        const order = await tx.order.create({
-          data: {
-            userId: winnerId,
-            auctionId,
-            totalAmount: finalPrice,
-            status: OrderStatus.PAID,
-            paymentDueDate,
-          },
-        });
-
-        // Create shipping record
-        await tx.shipping.create({
-          data: {
-            orderId: order.orderId,
-            auctionId,
-            sellerId: auction.sellerId,
-            buyerId: winnerId,
-            shippingStatus: ShippingStatus.PENDING,
-          },
-        });
-
-        return order;
-      });
-
-      return { orderId: result.orderId };
+      return result;
     } catch (error) {
+      // Handle Prisma unique constraint violation (P2002)
+      if (error instanceof Error && 'code' in error && error.code === 'P2002') {
+        // If duplicate order creation due to race condition, try to find existing order
+        const existingOrder = await this.prisma.order.findFirst({
+          where: {
+            auctionId,
+            userId: winnerId,
+          },
+        });
+        
+        if (existingOrder) {
+          return { orderId: existingOrder.orderId };
+        }
+      }
+
       if (
         error instanceof NotFoundException ||
         error instanceof BadRequestException
