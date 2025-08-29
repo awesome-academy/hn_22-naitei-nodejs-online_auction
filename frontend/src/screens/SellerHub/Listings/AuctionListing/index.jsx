@@ -268,8 +268,12 @@ const AuctionListing = () => {
             </div>
           ) : (
             auctions.map((auction) => (
-              <div key={auction.auctionId} className="grid grid-cols-7 gap-4 p-4 items-center hover:bg-gray-50 transition-colors duration-200">
-                {/* Auction Info */}
+              <div
+                key={auction.auctionId}
+                className="grid grid-cols-7 gap-4 p-4 items-center hover:bg-gray-50 transition-colors duration-200"
+                onClick={() => navigate(`/auctions/${auction.auctionId}`)} 
+                style={{ cursor: "pointer" }}
+              >                {/* Auction Info */}
                 <div className="flex items-center gap-3">
                   <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
                     <div className="w-full h-full bg-gray-300 rounded-lg flex items-center justify-center text-gray-500 text-xs">
